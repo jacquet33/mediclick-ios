@@ -73,8 +73,7 @@ struct HomeView: View {
                         }
                     }
                     
-                    // Sync status
-                        .padding(.horizontal)
+                    // Sync status placeholder
                 }
                 .padding(.vertical)
             }
