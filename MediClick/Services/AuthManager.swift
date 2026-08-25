@@ -91,16 +91,6 @@ enum AuthError: Error, LocalizedError {
     }
 }
 
-enum APIConfig {
-    // Cambiar por la URL del servidor en producción
-    static var baseURL: String {
-        #if DEBUG
-        return "http://localhost:3000"
-        #else
-        return "https://api.mediclick.com"
-        #endif
-    }
-}
 
 // MARK: - OAuth Extensions
 

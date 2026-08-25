@@ -9,8 +9,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: "1.0.1"
+    CURRENT_PROJECT_VERSION: 2
     GENERATE_INFOPLIST_FILE: YES
 
 targets:
@@ -20,6 +20,10 @@ targets:
     sources:
       - path: MediClick
         type: group
+    info:
+      properties:
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mediclick.app
