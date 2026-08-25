@@ -32,15 +32,27 @@ workflows:
         script: keychain add-certificates
       - name: Set up profiles
         script: xcode-project use-profiles
-      - name: Build IPA
+      - name: Archive
         script: |
-          xcode-project build-ipa \
-            --project MediClick.xcodeproj \
-            --scheme "$XCODE_SCHEME"
+          xcodebuild -project MediClick.xcodeproj \
+            -scheme "$XCODE_SCHEME" \
+            -sdk iphoneos \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/MediClick.xcarchive \
+            GENERATE_INFOPLIST_FILE=YES \
+            archive | xcpretty
+      - name: Export IPA
+        script: |
+          xcodebuild -exportArchive \
+            -archivePath build/MediClick.xcarchive \
+            -exportPath build/ipa \
+            -exportOptionsPlist exportOptions.plist
       - name: Upload to TestFlight
         script: |
           app-store-connect publish \
-            --path build/ios/ipa/*.ipa
+            --path build/ipa/*.ipa
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/ipa/*.ipa
+      - build/MediClick.xcarchive
       - /tmp/xcodebuild_logs/*.log
