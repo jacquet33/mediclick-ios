@@ -74,7 +74,6 @@ struct HomeView: View {
                     }
                     
                     // Sync status
-                    SyncStatusBar()
                         .padding(.horizontal)
                 }
                 .padding(.vertical)
@@ -184,46 +183,7 @@ struct AppointmentRow: View {
     }
 }
 
-// MARK: - Sync Status Bar
 
-struct SyncStatusBar: View {
-    @State private var sync = SyncEngine.shared
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(NetworkMonitor.shared.isConnected ? .green : .orange)
-                .frame(width: 8, height: 8)
-            
-            if sync.isSyncing {
-                ProgressView()
-                    .scaleEffect(0.7)
-                Text("Sincronizando...")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if sync.pendingChanges > 0 {
-                Text("\(sync.pendingChanges) cambios pendientes")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            } else {
-                Text(NetworkMonitor.shared.isConnected ? "Sincronizado" : "Modo offline")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            
-            Spacer()
-            
-            if let last = sync.lastSyncDate {
-                Text("Últ: \(last, style: .relative)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(10)
-        .background(.gray.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
-}
 
 // MARK: - Org Picker
 
