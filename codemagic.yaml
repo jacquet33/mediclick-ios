@@ -6,9 +6,6 @@ workflows:
     environment:
       groups:
         - a
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.mediclick.app
       vars:
         XCODE_SCHEME: "MediClick"
         BUNDLE_ID: "com.mediclick.app"
@@ -24,16 +21,14 @@ workflows:
         script: brew install xcodegen
       - name: Generate Xcode project
         script: xcodegen generate
-      - name: Set up keychain
-        script: keychain initialize
-      - name: Fetch signing files
-        script: app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-      - name: Add certificates
-        script: keychain add-certificates
-      - name: Set up profiles
-        script: xcode-project use-profiles
-      - name: Build IPA
-        script: xcode-project build-ipa --project MediClick.xcodeproj --scheme "$XCODE_SCHEME"
+      - name: Build for Simulator
+        script: |
+          xcodebuild build \
+            -project MediClick.xcodeproj \
+            -scheme "$XCODE_SCHEME" \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO | xcpretty
     artifacts:
-      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
