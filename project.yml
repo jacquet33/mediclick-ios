@@ -17,8 +17,7 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: MediClick
-        type: group
+      - MediClick
     info:
       properties:
         CFBundleDisplayName: MediClick
@@ -35,7 +34,7 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSLocalNetworkUsageDescription: "MediClick necesita acceso a la red local para sincronizar"
+        NSLocalNetworkUsageDescription: MediClick necesita acceso a la red local para sincronizar
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     settings:
@@ -45,9 +44,5 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         CODE_SIGN_STYLE: Manual
+        CODE_SIGN_ENTITLEMENTS: MediClick/MediClick.entitlements
         ENABLE_PREVIEWS: YES
-    entitlements:
-      path: MediClick/MediClick.entitlements
-      properties:
-        com.apple.security.app-sandbox: true
-        com.apple.security.network.client: true
