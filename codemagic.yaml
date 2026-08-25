@@ -34,17 +34,13 @@ workflows:
         script: xcode-project use-profiles
       - name: Build IPA
         script: |
-          xcodebuild -project MediClick.xcodeproj \
-            -scheme "$XCODE_SCHEME" \
-            -sdk iphoneos \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath build/MediClick.xcarchive \
-            archive 2>&1 | tee /tmp/build_log.txt | tail -50
-          
-          echo "=== ERRORS ==="
-          grep -i "error:" /tmp/build_log.txt || echo "No errors found in grep"
+          xcode-project build-ipa \
+            --project MediClick.xcodeproj \
+            --scheme "$XCODE_SCHEME"
+      - name: Upload to TestFlight
+        script: |
+          app-store-connect publish \
+            --path build/ios/ipa/*.ipa
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - /tmp/build_log.txt
