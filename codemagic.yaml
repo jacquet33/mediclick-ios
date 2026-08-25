@@ -37,10 +37,10 @@ workflows:
           xcode-project build-ipa \
             --project MediClick.xcodeproj \
             --scheme "$XCODE_SCHEME"
+      - name: Upload to TestFlight
+        script: |
+          app-store-connect publish \
+            --path build/ios/ipa/*.ipa
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    publishing:
-      app_store_connect:
-        auth: environment
-        submit_to_testflight: true
