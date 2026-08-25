@@ -3,7 +3,6 @@ workflows:
     name: MediClick iOS
     max_build_duration: 30
     instance_type: mac_mini_m2
-    
     environment:
       groups:
         - app_store_credentials
@@ -14,51 +13,30 @@ workflows:
         XCODE_SCHEME: "MediClick"
         BUNDLE_ID: "com.mediclick.app"
       xcode: latest
-    
     triggering:
       events:
         - push
       branch_patterns:
         - pattern: main
           include: true
-    
     scripts:
       - name: Install XcodeGen
-        script: |
-          brew install xcodegen
-
+        script: brew install xcodegen
       - name: Generate Xcode project
-        script: |
-          xcodegen generate
-
+        script: xcodegen generate
       - name: Set up keychain
-        script: |
-          keychain initialize
-
+        script: keychain initialize
       - name: Fetch signing files
-        script: |
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
-
-      - name: Add certificates to keychain
-        script: |
-          keychain add-certificates
-
-      - name: Set up profiles in Xcode
-        script: |
-          xcode-project use-profiles
-
-      - name: Build and archive
-        script: |
-          xcode-project build-ipa \
-            --project MediClick.xcodeproj \
-            --scheme "$XCODE_SCHEME"
-    
+        script: app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+      - name: Add certificates
+        script: keychain add-certificates
+      - name: Set up profiles
+        script: xcode-project use-profiles
+      - name: Build IPA
+        script: xcode-project build-ipa --project MediClick.xcodeproj --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    
     publishing:
       app_store_connect:
         auth: integration
