@@ -8,13 +8,13 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Label("Inicio", systemImage: "house.fill")
+                    Label("Inicio", systemImage: "heart.text.clipboard")
                 }
                 .tag(0)
             
             AgendaView()
                 .tabItem {
-                    Label("Agenda", systemImage: "calendar")
+                    Label("Agenda", systemImage: "calendar.badge.clock")
                 }
                 .tag(1)
             
@@ -26,7 +26,7 @@ struct MainTabView: View {
             
             PrescriptionsView()
                 .tabItem {
-                    Label("Recetas", systemImage: "doc.text.fill")
+                    Label("Recetas", systemImage: "cross.case.fill")
                 }
                 .tag(3)
             
@@ -36,6 +36,6 @@ struct MainTabView: View {
                 }
                 .tag(4)
         }
-        .tint(.blue)
+        .tint(Color.mediPrimary)
     }
 }

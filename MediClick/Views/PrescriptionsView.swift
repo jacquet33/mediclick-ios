@@ -104,7 +104,7 @@ struct PrescriptionDetailView: View {
             Section("Paciente") {
                 if let patient = prescription.patient {
                     HStack {
-                        PatientAvatar(name: patient.fullName, size: 40)
+                        MediAvatar(name: patient.fullName, size: 40)
                         Text(patient.fullName).font(.headline)
                     }
                 }
@@ -133,7 +133,7 @@ struct PrescriptionDetailView: View {
                         if let instructions = item.instructions {
                             Text(instructions)
                                 .font(.caption)
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Color.mediPrimary)
                         }
                     }
                     .padding(.vertical, 4)

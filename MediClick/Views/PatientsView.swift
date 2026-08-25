@@ -17,33 +17,75 @@ struct PatientsView: View {
     
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(filteredPatients) { patient in
-                    NavigationLink {
-                        PatientDetailView(patient: patient)
-                    } label: {
-                        PatientRowView(patient: patient)
+            ZStack {
+                Color.mediBackground.ignoresSafeArea()
+                
+                List {
+                    ForEach(filteredPatients) { patient in
+                        NavigationLink {
+                            PatientDetailView(patient: patient)
+                        } label: {
+                            HStack(spacing: 12) {
+                                MediAvatar(name: patient.fullName, size: 44)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(patient.fullName)
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.mediTextPrimary)
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "heart.text.clipboard")
+                                            .font(.caption2)
+                                        Text(patient.chronicConditions.joined(separator: " · "))
+                                            .lineLimit(1)
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(Color.mediTextSecondary)
+                                }
+                                
+                                Spacer()
+                                
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    if let age = patient.age {
+                                        Text("\(age) años")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.mediPrimary)
+                                    }
+                                    Text(patient.insuranceProvider ?? "")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.mediTextMuted)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .searchable(text: $searchText, prompt: "Buscar por nombre o DNI")
             }
-            .searchable(text: $searchText, prompt: "Buscar por nombre o DNI")
             .navigationTitle("Pacientes")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showNewPatient = true } label: {
-                        Image(systemName: "plus.circle.fill")
+                        Image(systemName: "person.badge.plus")
+                            .foregroundStyle(Color.mediPrimary)
                     }
                 }
             }
             .overlay {
                 if patients.isEmpty {
-                    ContentUnavailableView {
-                        Label("Sin pacientes", systemImage: "person.2")
-                    } description: {
+                    VStack(spacing: 16) {
+                        Image(systemName: "person.2.badge.gearshape")
+                            .font(.system(size: 50))
+                            .foregroundStyle(Color.mediPrimary.opacity(0.4))
+                        Text("Sin pacientes")
+                            .font(.title3.weight(.medium))
+                            .foregroundStyle(Color.mediTextPrimary)
                         Text("Agregá tu primer paciente")
-                    } actions: {
+                            .font(.subheadline)
+                            .foregroundStyle(Color.mediTextSecondary)
                         Button("Agregar paciente") { showNewPatient = true }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(MediButtonStyle())
+                            .frame(width: 200)
                     }
                 }
             }
@@ -54,113 +96,71 @@ struct PatientsView: View {
     }
 }
 
-// MARK: - Patient Row
-
-struct PatientRowView: View {
-    let patient: LocalPatient
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            PatientAvatar(name: patient.fullName, size: 44)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(patient.fullName)
-                    .font(.body.weight(.medium))
-                Text(patient.chronicConditions.joined(separator: " · "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 2) {
-                if let age = patient.age {
-                    Text("\(age) años")
-                        .font(.subheadline.weight(.medium))
-                }
-                Text(patient.insuranceProvider ?? "")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Patient Detail
-
 struct PatientDetailView: View {
     let patient: LocalPatient
-    @Query private var records: [LocalMedicalRecord]
     
     var body: some View {
-        List {
-            // Header
-            Section {
-                HStack(spacing: 16) {
-                    PatientAvatar(name: patient.fullName, size: 60)
-                    VStack(alignment: .leading, spacing: 4) {
+        ZStack {
+            Color.mediBackground.ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Header
+                    VStack(spacing: 12) {
+                        MediAvatar(name: patient.fullName, size: 70)
                         Text(patient.fullName)
                             .font(.title2.bold())
+                            .foregroundStyle(Color.mediTextPrimary)
                         if let age = patient.age {
                             Text("\(age) años · DNI \(patient.dni ?? "—")")
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.mediTextSecondary)
                         }
                     }
-                }
-            }
-            
-            // Contact
-            Section("Contacto") {
-                LabeledContent("Teléfono", value: patient.phone ?? "—")
-                LabeledContent("Email", value: patient.email ?? "—")
-                LabeledContent("Obra social", value: "\(patient.insuranceProvider ?? "—") \(patient.insuranceNumber ?? "")")
-            }
-            
-            // Allergies
-            if !patient.allergies.isEmpty {
-                Section("Alergias") {
-                    FlowLayout(items: patient.allergies) { allergy in
-                        Text(allergy)
-                            .font(.caption.weight(.medium))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(.red.opacity(0.1))
-                            .foregroundStyle(.red)
-                            .clipShape(Capsule())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: Color.mediPrimary.opacity(0.06), radius: 8, y: 2)
+                    
+                    // Contact
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Contacto", systemImage: "phone.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.mediPrimary)
+                        MediInfoRow(icon: "phone.fill", label: "Teléfono", value: patient.phone ?? "—")
+                        MediInfoRow(icon: "envelope.fill", label: "Email", value: patient.email ?? "—")
+                        MediInfoRow(icon: "cross.case.fill", label: "Obra social", value: patient.insuranceProvider ?? "—")
+                    }
+                    .mediCard()
+                    
+                    // Allergies
+                    if !patient.allergies.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Alergias", systemImage: "exclamationmark.triangle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.mediDanger)
+                            FlowLayout(items: patient.allergies) { allergy in
+                                MediBadge(allergy, color: .mediDanger, bgColor: .mediDangerLight)
+                            }
+                        }
+                        .mediCard()
+                    }
+                    
+                    // Chronic conditions
+                    if !patient.chronicConditions.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Condiciones crónicas", systemImage: "heart.text.clipboard")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.mediPrimary)
+                            FlowLayout(items: patient.chronicConditions) { cond in
+                                MediBadge(cond, color: .mediPrimary, bgColor: Color.mediPrimary.opacity(0.12))
+                            }
+                        }
+                        .mediCard()
                     }
                 }
-            }
-            
-            // Chronic conditions
-            if !patient.chronicConditions.isEmpty {
-                Section("Condiciones crónicas") {
-                    FlowLayout(items: patient.chronicConditions) { condition in
-                        Text(condition)
-                            .font(.caption.weight(.medium))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(.blue.opacity(0.1))
-                            .foregroundStyle(.blue)
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-            
-            // Emergency contact
-            Section("Emergencia") {
-                LabeledContent("Contacto", value: patient.emergencyContactName ?? "—")
-                LabeledContent("Teléfono", value: patient.emergencyContactPhone ?? "—")
-            }
-            
-            // Notes
-            if let notes = patient.notes, !notes.isEmpty {
-                Section("Notas") {
-                    Text(notes)
-                        .font(.body)
-                }
+                .padding()
             }
         }
         .navigationTitle("Ficha")
@@ -168,12 +168,31 @@ struct PatientDetailView: View {
     }
 }
 
-// MARK: - New Patient
+struct MediInfoRow: View {
+    let icon: String
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(Color.mediPrimary)
+                .frame(width: 20)
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(Color.mediTextSecondary)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.mediTextPrimary)
+        }
+    }
+}
 
 struct NewPatientView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var dni = ""
@@ -187,28 +206,50 @@ struct NewPatientView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Datos personales") {
-                    TextField("Nombre *", text: $firstName)
-                    TextField("Apellido *", text: $lastName)
-                    TextField("DNI", text: $dni).keyboardType(.numberPad)
-                    TextField("Teléfono", text: $phone).keyboardType(.phonePad)
-                    TextField("Email", text: $email).keyboardType(.emailAddress).autocapitalization(.none)
-                    DatePicker("Fecha de nacimiento", selection: $dateOfBirth, displayedComponents: .date)
-                }
-                Section("Obra social") {
-                    TextField("Obra social / Prepaga", text: $insuranceProvider)
-                    TextField("Nro. de afiliado", text: $insuranceNumber)
-                }
-                Section("Datos clínicos") {
-                    TextField("Alergias (separar con coma)", text: $allergiesText)
-                    TextField("Condiciones crónicas (separar con coma)", text: $conditionsText)
-                }
-                Section {
-                    Button("Guardar paciente") { save() }
-                        .frame(maxWidth: .infinity)
+            ZStack {
+                Color.mediBackground.ignoresSafeArea()
+                Form {
+                    Section {
+                        Label("Datos personales", systemImage: "person.fill")
+                            .foregroundStyle(Color.mediPrimary)
+                    }
+                    Section {
+                        TextField("Nombre *", text: $firstName)
+                        TextField("Apellido *", text: $lastName)
+                        TextField("DNI", text: $dni).keyboardType(.numberPad)
+                        TextField("Teléfono", text: $phone).keyboardType(.phonePad)
+                        TextField("Email", text: $email).keyboardType(.emailAddress).autocapitalization(.none)
+                        DatePicker("Nacimiento", selection: $dateOfBirth, displayedComponents: .date)
+                    }
+                    Section {
+                        Label("Obra social", systemImage: "cross.case.fill")
+                            .foregroundStyle(Color.mediPrimary)
+                    }
+                    Section {
+                        TextField("Obra social / Prepaga", text: $insuranceProvider)
+                        TextField("Nro. de afiliado", text: $insuranceNumber)
+                    }
+                    Section {
+                        Label("Datos clínicos", systemImage: "heart.text.clipboard")
+                            .foregroundStyle(Color.mediPrimary)
+                    }
+                    Section {
+                        TextField("Alergias (separar con coma)", text: $allergiesText)
+                        TextField("Condiciones crónicas (separar con coma)", text: $conditionsText)
+                    }
+                    Section {
+                        Button { save() } label: {
+                            HStack {
+                                Image(systemName: "person.badge.plus")
+                                Text("Guardar paciente")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .foregroundStyle(Color.mediPrimary)
+                        }
                         .disabled(firstName.isEmpty || lastName.isEmpty)
+                    }
                 }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Nuevo paciente")
             .navigationBarTitleDisplayMode(.inline)
@@ -237,44 +278,12 @@ struct NewPatientView: View {
     }
 }
 
-// MARK: - Helpers
-
-struct PatientAvatar: View {
-    let name: String
-    let size: CGFloat
-    
-    private var initials: String {
-        let parts = name.split(separator: " ")
-        let first = parts.first?.prefix(1) ?? ""
-        let last = parts.dropFirst().first?.prefix(1) ?? ""
-        return "\(first)\(last)".uppercased()
-    }
-    
-    private var color: Color {
-        let colors: [Color] = [.blue, .red, .green, .purple, .orange, .pink, .teal]
-        let index = abs(name.hashValue) % colors.count
-        return colors[index]
-    }
-    
-    var body: some View {
-        Text(initials)
-            .font(.system(size: size * 0.35, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(color)
-            .clipShape(Circle())
-    }
-}
-
 struct FlowLayout<T: Hashable, Content: View>: View {
     let items: [T]
     let content: (T) -> Content
-    
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], alignment: .leading, spacing: 6) {
-            ForEach(items, id: \.self) { item in
-                content(item)
-            }
+            ForEach(items, id: \.self) { item in content(item) }
         }
     }
 }

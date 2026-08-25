@@ -42,7 +42,7 @@ struct ChatRow: View {
                 Spacer().frame(width: 8)
             }
             
-            PatientAvatar(name: conversation.patient?.fullName ?? "?", size: 44)
+            MediAvatar(name: conversation.patient?.fullName ?? "?", size: 44)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(conversation.patient?.fullName ?? "Paciente")
@@ -108,7 +108,7 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Color.mediPrimary)
                 }
                 .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }

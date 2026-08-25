@@ -112,7 +112,7 @@ struct AppointmentDetailView: View {
             Section("Paciente") {
                 if let patient = appointment.patient {
                     HStack {
-                        PatientAvatar(name: patient.fullName, size: 44)
+                        MediAvatar(name: patient.fullName, size: 44)
                         VStack(alignment: .leading) {
                             Text(patient.fullName).font(.headline)
                             Text(patient.phone ?? "").font(.caption).foregroundStyle(.secondary)
@@ -134,21 +134,21 @@ struct AppointmentDetailView: View {
                         appointment.status = "confirmed"
                         try? modelContext.save()
                     }
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.mediSuccess)
                 }
                 if appointment.status == "confirmed" {
                     Button("Iniciar consulta") {
                         appointment.status = "in_progress"
                         try? modelContext.save()
                     }
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Color.mediPrimary)
                 }
                 if appointment.status == "in_progress" {
                     Button("Completar consulta") {
                         appointment.status = "completed"
                         try? modelContext.save()
                     }
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.mediSuccess)
                 }
                 if appointment.status != "cancelled" && appointment.status != "completed" {
                     Button("Cancelar turno", role: .destructive) {
