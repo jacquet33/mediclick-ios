@@ -21,15 +21,6 @@ workflows:
         script: brew install xcodegen
       - name: Generate Xcode project
         script: xcodegen generate
-      - name: Allow HTTP connections
-        script: |
-          PLIST=$(find . -name "Info.plist" -path "*/MediClick*" | head -1)
-          if [ -z "$PLIST" ]; then
-            PLIST="MediClick/Info.plist"
-            plutil -create xml1 "$PLIST"
-          fi
-          plutil -replace NSAppTransportSecurity -dictionary "$PLIST"
-          plutil -insert NSAppTransportSecurity.NSAllowsArbitraryLoads -bool true "$PLIST"
       - name: Set up keychain
         script: keychain initialize
       - name: Fetch signing files
