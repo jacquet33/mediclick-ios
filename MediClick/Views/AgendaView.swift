@@ -148,7 +148,7 @@ struct AppointmentDetailView: View {
                     VStack(spacing: 12) {
                         MediAvatar(name: appointment.patient?.fullName ?? "?", size: 64)
                         Text(appointment.patient?.fullName ?? "Paciente")
-                            .font(.title3.bold())
+                            .font(.mediTitle(21))
                             .foregroundStyle(Color.mediText)
                         MediBadge(MediStatus.label(for: appointment.status),
                                   color: MediStatus.color(for: appointment.status))
@@ -266,10 +266,13 @@ struct NewAppointmentView: View {
                             MediSectionHeader(title: "Fecha y hora", icon: "calendar.badge.clock")
                             DatePicker("Fecha", selection: $date, displayedComponents: .date)
                                 .tint(Color.mediPrimary)
+                                .foregroundStyle(Color.mediText)
                             DatePicker("Hora", selection: $startTime, displayedComponents: .hourAndMinute)
                                 .tint(Color.mediPrimary)
+                                .foregroundStyle(Color.mediText)
                             Toggle("Primera visita", isOn: $isFirstVisit)
                                 .tint(Color.mediCyan)
+                                .foregroundStyle(Color.mediText)
                         }
                         .mediElevated(padding: 18)
                         

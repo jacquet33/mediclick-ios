@@ -66,7 +66,7 @@ struct BookingSettingsView: View {
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Reservas online")
-                                        .font(.subheadline.weight(.semibold))
+                                        .font(.mediHeadline(15))
                                         .foregroundStyle(Color.mediText)
                                     Text(isEnabled ? "Activo · los pacientes pueden reservar" : "Desactivado")
                                         .font(.caption)
@@ -195,7 +195,7 @@ struct BookingSettingsView: View {
                                             .foregroundStyle(Color.mediText)
                                         Spacer()
                                         Text("\(paymentDeadline) min")
-                                            .font(.subheadline.weight(.semibold))
+                                            .font(.mediHeadline(15))
                                             .foregroundStyle(Color.mediPrimary)
                                         Stepper("", value: $paymentDeadline, in: 15...1440, step: 15)
                                             .labelsHidden().tint(Color.mediPrimary)
@@ -212,7 +212,7 @@ struct BookingSettingsView: View {
                                     Toggle(isOn: $keepsDeposit) {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text("Me quedo con la seña")
-                                                .font(.subheadline.weight(.medium))
+                                                .font(.mediCaption(15))
                                                 .foregroundStyle(Color.mediText)
                                             Text("No se devuelve si no asiste")
                                                 .font(.caption)
@@ -225,7 +225,7 @@ struct BookingSettingsView: View {
                                 Toggle(isOn: $chargeOnNoShow) {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Cobrar multa adicional")
-                                            .font(.subheadline.weight(.medium))
+                                            .font(.mediCaption(15))
                                             .foregroundStyle(Color.mediText)
                                         Text("Cargo extra por inasistencia")
                                             .font(.caption)
@@ -251,7 +251,7 @@ struct BookingSettingsView: View {
                                         .foregroundStyle(Color.mediText)
                                     Spacer()
                                     Text("\(minHoursCancel)h antes")
-                                        .font(.subheadline.weight(.semibold))
+                                        .font(.mediHeadline(15))
                                         .foregroundStyle(Color.mediPrimary)
                                     Stepper("", value: $minHoursCancel, in: 1...168, step: 1)
                                         .labelsHidden().tint(Color.mediPrimary)
@@ -277,7 +277,7 @@ struct BookingSettingsView: View {
                                         .font(.subheadline).foregroundStyle(Color.mediText)
                                     Spacer()
                                     Text("\(maxDaysAdvance) días")
-                                        .font(.subheadline.weight(.semibold)).foregroundStyle(Color.mediPrimary)
+                                        .font(.mediHeadline(15)).foregroundStyle(Color.mediPrimary)
                                     Stepper("", value: $maxDaysAdvance, in: 1...365, step: 5)
                                         .labelsHidden().tint(Color.mediPrimary)
                                 }
@@ -287,7 +287,7 @@ struct BookingSettingsView: View {
                                         .font(.subheadline).foregroundStyle(Color.mediText)
                                     Spacer()
                                     Text("\(minHoursAdvance)h")
-                                        .font(.subheadline.weight(.semibold)).foregroundStyle(Color.mediPrimary)
+                                        .font(.mediHeadline(15)).foregroundStyle(Color.mediPrimary)
                                     Stepper("", value: $minHoursAdvance, in: 0...72, step: 1)
                                         .labelsHidden().tint(Color.mediPrimary)
                                 }
@@ -467,7 +467,7 @@ struct ModeOption: View {
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.mediHeadline(15))
                         .foregroundStyle(Color.mediText)
                     Text(subtitle)
                         .font(.caption)

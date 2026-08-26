@@ -54,7 +54,7 @@ struct ProfileView: View {
                             
                             VStack(spacing: 4) {
                                 Text("Dr. \(auth.fullName)")
-                                    .font(.title2.bold())
+                                    .font(.mediTitle(24))
                                     .foregroundStyle(Color.mediText)
                                 Text(auth.specialty)
                                     .font(.subheadline)
@@ -87,7 +87,7 @@ struct ProfileView: View {
                                         
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(org.name)
-                                                .font(.subheadline.weight(.semibold))
+                                                .font(.mediHeadline(15))
                                                 .foregroundStyle(Color.mediText)
                                             Text(orgTypeLabel(org.type) + " · " + roleLabel(org.role))
                                                 .font(.caption)
@@ -121,7 +121,7 @@ struct ProfileView: View {
                                     Text("Agregar consultorio")
                                     Spacer()
                                 }
-                                .font(.subheadline.weight(.medium))
+                                .font(.mediCaption(15))
                                 .foregroundStyle(Color.mediPrimary)
                                 .padding(12)
                             }
@@ -314,7 +314,7 @@ struct NotifToggle: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline.weight(.medium))
+                    .font(.mediCaption(15))
                     .foregroundStyle(Color.mediText)
                 Text(subtitle)
                     .font(.caption)

@@ -35,10 +35,10 @@ struct HomeView: View {
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(greeting)
-                                        .font(.subheadline.weight(.medium))
+                                        .font(.mediCaption(15))
                                         .foregroundStyle(.white.opacity(0.85))
                                     Text("Dr. \(auth.lastName.isEmpty ? "Doctor" : auth.lastName)")
-                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .font(.mediTitle(28))
                                         .foregroundStyle(.white)
                                 }
                                 Spacer()
@@ -50,7 +50,7 @@ struct HomeView: View {
                                             Image(uiImage: ui).resizable().scaledToFill()
                                                 .frame(width: 50, height: 50).clipShape(Circle())
                                         } else {
-                                            Image(systemName: "stethoscope")
+                                            Image(systemName: "waveform.path.ecg")
                                                 .font(.system(size: 23, weight: .medium))
                                                 .foregroundStyle(.white)
                                         }
@@ -228,7 +228,7 @@ struct StatCardPro: View {
                 Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
             }
             Text(value)
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .font(.mediNumber(30))
                 .foregroundStyle(.white)
             Text(title)
                 .font(.caption.weight(.medium))
@@ -260,7 +260,7 @@ struct AppointmentRowPro: View {
             
             VStack(alignment: .leading, spacing: 5) {
                 Text(appointment.patient?.fullName ?? "Paciente")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.mediHeadline(15))
                     .foregroundStyle(Color.mediText)
                 HStack(spacing: 5) {
                     Image(systemName: "cross.case.fill").font(.system(size: 9))

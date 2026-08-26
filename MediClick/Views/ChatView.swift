@@ -75,7 +75,7 @@ struct ChatRowPro: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(conversation.patient?.fullName ?? "Paciente")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.mediHeadline(15))
                     .foregroundStyle(Color.mediText)
                 Text(conversation.lastMessageText ?? "Sin mensajes")
                     .font(.caption)
@@ -239,7 +239,7 @@ struct NewChatView: View {
                                     MediAvatar(name: patient.fullName, size: 46)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(patient.fullName)
-                                            .font(.subheadline.weight(.medium))
+                                            .font(.mediCaption(15))
                                             .foregroundStyle(Color.mediText)
                                         Text(patient.phone ?? "")
                                             .font(.caption)

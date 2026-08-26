@@ -307,9 +307,15 @@ struct MediTextField: View {
                 .frame(width: 22)
             
             if isSecure {
-                SecureField(placeholder, text: $text).focused($isFocused)
+                SecureField("", text: $text, prompt: Text(placeholder).foregroundColor(Color.mediTextMuted))
+                    .focused($isFocused)
+                    .foregroundStyle(Color.mediText)
+                    .font(.system(size: 16, design: .rounded))
             } else {
-                TextField(placeholder, text: $text).focused($isFocused)
+                TextField("", text: $text, prompt: Text(placeholder).foregroundColor(Color.mediTextMuted))
+                    .focused($isFocused)
+                    .foregroundStyle(Color.mediText)
+                    .font(.system(size: 16, design: .rounded))
             }
         }
         .padding(16)
@@ -391,6 +397,181 @@ struct MediStatus {
         case "active": return "Vigente"
         case "expired": return "Vencida"
         default: return status.capitalized
+        }
+    }
+}
+
+
+// MARK: - Typography
+
+extension Font {
+    static func mediTitle(_ size: CGFloat = 28) -> Font {
+        .system(size: size, weight: .bold, design: .rounded)
+    }
+    static func mediHeadline(_ size: CGFloat = 17) -> Font {
+        .system(size: size, weight: .semibold, design: .rounded)
+    }
+    static func mediBody(_ size: CGFloat = 16) -> Font {
+        .system(size: size, weight: .regular, design: .rounded)
+    }
+    static func mediCaption(_ size: CGFloat = 13) -> Font {
+        .system(size: size, weight: .medium, design: .rounded)
+    }
+    static func mediNumber(_ size: CGFloat = 30) -> Font {
+        .system(size: size, weight: .bold, design: .rounded)
+    }
+}
+
+// MARK: - Animated Logo (heartbeat + ECG wave)
+
+struct MediAnimatedLogo: View {
+    var size: CGFloat = 96
+    @State private var pulse = false
+    @State private var wavePhase: CGFloat = 0
+    @State private var glowOpacity: Double = 0.3
+    
+    var body: some View {
+        ZStack {
+            // Outer glow that breathes
+            Circle()
+                .fill(LinearGradient.medi([.mediCyan.opacity(0.35), .mediSky.opacity(0.1)]))
+                .frame(width: size * 1.45, height: size * 1.45)
+                .blur(radius: size * 0.22)
+                .opacity(glowOpacity)
+                .scaleEffect(pulse ? 1.08 : 0.96)
+            
+            // Pulse rings
+            ForEach(0..<2, id: \.self) { i in
+                Circle()
+                    .stroke(Color.mediCyan.opacity(0.4), lineWidth: 1.5)
+                    .frame(width: size, height: size)
+                    .scaleEffect(pulse ? 1.35 : 1.0)
+                    .opacity(pulse ? 0 : 0.6)
+                    .animation(
+                        .easeOut(duration: 1.8)
+                        .repeatForever(autoreverses: false)
+                        .delay(Double(i) * 0.9),
+                        value: pulse
+                    )
+            }
+            
+            // Main circle
+            Circle()
+                .fill(LinearGradient.mediHero)
+                .frame(width: size, height: size)
+            Circle()
+                .fill(LinearGradient.mediShine)
+                .frame(width: size, height: size)
+            Circle()
+                .stroke(.white.opacity(0.45), lineWidth: 1.5)
+                .frame(width: size, height: size)
+            
+            // ECG wave
+            ECGWave(phase: wavePhase)
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.3), .white, .white.opacity(0.3)],
+                        startPoint: .leading, endPoint: .trailing
+                    ),
+                    style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                )
+                .frame(width: size * 0.72, height: size * 0.34)
+                .offset(y: size * 0.16)
+            
+            // Heart that beats
+            Image(systemName: "heart.fill")
+                .font(.system(size: size * 0.3, weight: .medium))
+                .foregroundStyle(.white)
+                .offset(y: -size * 0.13)
+                .scaleEffect(pulse ? 1.12 : 1.0)
+                .shadow(color: .white.opacity(0.5), radius: pulse ? 8 : 3)
+        }
+        .frame(width: size * 1.45, height: size * 1.45)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                pulse = true
+            }
+            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
+                glowOpacity = 0.7
+            }
+            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+                wavePhase = 1
+            }
+        }
+    }
+}
+
+/// ECG line that scrolls
+struct ECGWave: Shape {
+    var phase: CGFloat
+    
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
+    
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width, h = rect.height
+        let mid = h / 2
+        
+        // Normalized ECG pattern points (x 0-1, y -1 to 1)
+        let pattern: [(CGFloat, CGFloat)] = [
+            (0.00, 0), (0.14, 0),
+            (0.20, -0.18),           // P wave
+            (0.26, 0),
+            (0.32, 0.28),            // Q
+            (0.38, -1.0),            // R spike
+            (0.44, 0.45),            // S
+            (0.50, 0),
+            (0.62, -0.32),           // T wave
+            (0.72, 0), (1.00, 0)
+        ]
+        
+        // Draw two cycles offset by phase for continuous scroll
+        for cycle in 0..<2 {
+            let offset = (CGFloat(cycle) - phase) * w
+            for (i, pt) in pattern.enumerated() {
+                let x = offset + pt.0 * w
+                let y = mid + pt.1 * mid * 0.85
+                if i == 0 && cycle == 0 {
+                    p.move(to: CGPoint(x: x, y: y))
+                } else if i == 0 {
+                    p.addLine(to: CGPoint(x: x, y: y))
+                } else {
+                    p.addLine(to: CGPoint(x: x, y: y))
+                }
+            }
+        }
+        return p
+    }
+}
+
+// MARK: - Small animated pulse icon (for headers)
+
+struct MediPulseIcon: View {
+    var size: CGFloat = 54
+    @State private var beat = false
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(.white.opacity(0.18))
+                .frame(width: size, height: size)
+            Circle()
+                .stroke(.white.opacity(0.35), lineWidth: 1.5)
+                .frame(width: size, height: size)
+                .scaleEffect(beat ? 1.12 : 1.0)
+                .opacity(beat ? 0.3 : 1)
+            Image(systemName: "waveform.path.ecg")
+                .font(.system(size: size * 0.42, weight: .medium))
+                .foregroundStyle(.white)
+                .scaleEffect(beat ? 1.06 : 1.0)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
+                beat = true
+            }
         }
     }
 }

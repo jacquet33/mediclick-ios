@@ -47,7 +47,7 @@ struct PatientsView: View {
                                 VStack(alignment: .trailing, spacing: 2) {
                                     if let age = patient.age {
                                         Text("\(age) años")
-                                            .font(.subheadline.weight(.medium))
+                                            .font(.mediCaption(15))
                                             .foregroundStyle(Color.mediPrimary)
                                     }
                                     Text(patient.insuranceProvider ?? "")
@@ -109,7 +109,7 @@ struct PatientDetailView: View {
                     VStack(spacing: 12) {
                         MediAvatar(name: patient.fullName, size: 70)
                         Text(patient.fullName)
-                            .font(.title2.bold())
+                            .font(.mediTitle(24))
                             .foregroundStyle(Color.mediText)
                         if let age = patient.age {
                             Text("\(age) años · DNI \(patient.dni ?? "—")")
@@ -126,7 +126,7 @@ struct PatientDetailView: View {
                     // Contact
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Contacto", systemImage: "phone.circle.fill")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.mediHeadline(15))
                             .foregroundStyle(Color.mediPrimary)
                         MediInfoRow(icon: "phone.fill", label: "Teléfono", value: patient.phone ?? "—")
                         MediInfoRow(icon: "envelope.fill", label: "Email", value: patient.email ?? "—")
@@ -138,7 +138,7 @@ struct PatientDetailView: View {
                     if !patient.allergies.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("Alergias", systemImage: "exclamationmark.triangle.fill")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.mediHeadline(15))
                                 .foregroundStyle(Color.mediDanger)
                             FlowLayout(items: patient.allergies) { allergy in
                                 MediBadge(allergy, color: .mediDanger)
@@ -151,7 +151,7 @@ struct PatientDetailView: View {
                     if !patient.chronicConditions.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("Condiciones crónicas", systemImage: "heart.text.clipboard")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.mediHeadline(15))
                                 .foregroundStyle(Color.mediPrimary)
                             FlowLayout(items: patient.chronicConditions) { cond in
                                 MediBadge(cond, color: .mediPrimary)
@@ -184,7 +184,7 @@ struct MediInfoRow: View {
                 .foregroundStyle(Color.mediTextSoft)
             Spacer()
             Text(value)
-                .font(.subheadline.weight(.medium))
+                .font(.mediCaption(15))
                 .foregroundStyle(Color.mediText)
         }
     }

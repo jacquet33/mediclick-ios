@@ -78,7 +78,7 @@ struct PrescriptionCardPro: View {
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(prescription.items?.first?.medicationName ?? "Receta")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.mediHeadline(15))
                         .foregroundStyle(Color.mediText)
                     Text(prescription.diagnosis)
                         .font(.caption)
@@ -146,7 +146,7 @@ struct PrescriptionDetailView: View {
                         .shadow(color: MediStatus.color(for: prescription.status).opacity(0.4), radius: 12, y: 5)
                         
                         Text(prescription.patient?.fullName ?? "Paciente")
-                            .font(.title3.bold())
+                            .font(.mediTitle(21))
                             .foregroundStyle(Color.mediText)
                         MediBadge(MediStatus.label(for: prescription.status),
                                   color: MediStatus.color(for: prescription.status))
@@ -171,7 +171,7 @@ struct PrescriptionDetailView: View {
                         ForEach(prescription.items ?? [], id: \.id) { item in
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(item.medicationName)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.mediHeadline(15))
                                     .foregroundStyle(Color.mediText)
                                 HStack(spacing: 8) {
                                     MediBadge(item.dosage, color: .mediCyan)

@@ -16,43 +16,19 @@ struct LoginView: View {
                 VStack(spacing: 26) {
                     Spacer().frame(height: 50)
                     
-                    // Premium logo with glow
-                    VStack(spacing: 14) {
-                        ZStack {
-                            // Outer glow
-                            Circle()
-                                .fill(LinearGradient.medi([.mediCyan.opacity(0.3), .mediSky.opacity(0.1)]))
-                                .frame(width: 130, height: 130)
-                                .blur(radius: 20)
-                            
-                            // Main circle
-                            Circle()
-                                .fill(LinearGradient.mediHero)
-                                .frame(width: 96, height: 96)
-                            
-                            Circle()
-                                .fill(LinearGradient.mediShine)
-                                .frame(width: 96, height: 96)
-                            
-                            Circle()
-                                .stroke(.white.opacity(0.4), lineWidth: 1.5)
-                                .frame(width: 96, height: 96)
-                            
-                            Image(systemName: "stethoscope")
-                                .font(.system(size: 42, weight: .medium))
-                                .foregroundStyle(.white)
-                                .shadow(color: .mediDeep.opacity(0.3), radius: 4, y: 2)
-                        }
-                        .shadow(color: .mediCyan.opacity(0.4), radius: 24, y: 10)
-                        .scaleEffect(animateLogo ? 1 : 0.9)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: animateLogo)
+                    // Animated logo
+                    VStack(spacing: 10) {
+                        MediAnimatedLogo(size: 96)
+                            .scaleEffect(animateLogo ? 1 : 0.85)
+                            .opacity(animateLogo ? 1 : 0)
+                            .animation(.spring(response: 0.7, dampingFraction: 0.65), value: animateLogo)
                         
                         Text("MediClick")
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .font(.mediTitle(34))
                             .foregroundStyle(LinearGradient.medi([.mediPrimary, .mediDeep]))
                         
                         Text("Gestión médica integral")
-                            .font(.subheadline)
+                            .font(.mediCaption(15))
                             .foregroundStyle(Color.mediTextSoft)
                     }
                     .onAppear { animateLogo = true }
