@@ -987,9 +987,6 @@ struct PendingInvitationsView: View {
         do {
             let _: MessageResponse = try await APIClient.shared.post("/api/v1/invitations/\(inv.id)/accept")
             
-            // Recargar organizaciones del doctor
-            let orgs: [[String: Any]] = try await APIClient.shared.get("/api/v1/organizations")
-            // Simplificamos: removemos la invitación y recargamos al volver
             await MainActor.run {
                 invitations.removeAll { $0.id == inv.id }
                 processingId = nil
@@ -1003,38 +1000,4 @@ struct PendingInvitationsView: View {
 
 // MARK: - Themed TextField
 
-struct MediTextField: View {
-    let label: String
-    @Binding var text: String
-    var icon: String = ""
-    var placeholder: String = ""
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.mediCaption(13))
-                .foregroundStyle(Color.mediTextSoft)
-            
-            HStack(spacing: 10) {
-                if !icon.isEmpty {
-                    Image(systemName: icon)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.mediCyan)
-                        .frame(width: 20)
-                }
-                TextField(placeholder, text: $text)
-                    .font(.mediBody(15))
-                    .foregroundStyle(Color.mediText)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-            }
-            .padding(12)
-            .background(Color.mediBg)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.mediCyan.opacity(0.2), lineWidth: 1)
-            )
-        }
-    }
-}
+// MediTextField is defined in MediTheme.swift

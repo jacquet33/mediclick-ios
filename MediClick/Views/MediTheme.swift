@@ -290,49 +290,60 @@ struct MediButtonStyle: ButtonStyle {
 // MARK: - Premium TextField
 
 struct MediTextField: View {
-    let icon: String
-    let placeholder: String
+    var label: String = ""
+    var icon: String = ""
+    var placeholder: String = ""
     @Binding var text: String
     var isSecure: Bool = false
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(
-                    isFocused ? LinearGradient.medi([.mediCyan, .mediPrimary])
-                              : LinearGradient.medi([.mediTextMuted, .mediTextMuted])
-                )
-                .frame(width: 22)
-            
-            if isSecure {
-                SecureField("", text: $text, prompt: Text(placeholder).foregroundColor(Color.mediTextMuted))
-                    .focused($isFocused)
-                    .foregroundStyle(Color.mediText)
-                    .font(.system(size: 16, design: .rounded))
-            } else {
-                TextField("", text: $text, prompt: Text(placeholder).foregroundColor(Color.mediTextMuted))
-                    .focused($isFocused)
-                    .foregroundStyle(Color.mediText)
-                    .font(.system(size: 16, design: .rounded))
+        VStack(alignment: .leading, spacing: 6) {
+            if !label.isEmpty {
+                Text(label)
+                    .font(.mediCaption(13))
+                    .foregroundStyle(Color.mediTextSoft)
             }
+            
+            HStack(spacing: 12) {
+                if !icon.isEmpty {
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(
+                            isFocused ? LinearGradient.medi([.mediCyan, .mediPrimary])
+                                      : LinearGradient.medi([.mediTextMuted, .mediTextMuted])
+                        )
+                        .frame(width: 22)
+                }
+                
+                if isSecure {
+                    SecureField("", text: $text, prompt: Text(placeholder).foregroundColor(Color.mediTextMuted))
+                        .focused($isFocused)
+                        .foregroundStyle(Color.mediText)
+                        .font(.system(size: 16, design: .rounded))
+                } else {
+                    TextField("", text: $text, prompt: Text(placeholder).foregroundColor(Color.mediTextMuted))
+                        .focused($isFocused)
+                        .foregroundStyle(Color.mediText)
+                        .font(.system(size: 16, design: .rounded))
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white.opacity(0.7))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        isFocused ? LinearGradient.medi([.mediCyan, .mediPrimary])
+                                  : LinearGradient.medi([.mediPrimary.opacity(0.15), .mediSky.opacity(0.1)]),
+                        lineWidth: isFocused ? 1.5 : 1
+                    )
+            )
+            .shadow(color: isFocused ? .mediCyan.opacity(0.2) : .clear, radius: 8, y: 2)
+            .animation(.easeOut(duration: 0.2), value: isFocused)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.white.opacity(0.7))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(
-                    isFocused ? LinearGradient.medi([.mediCyan, .mediPrimary])
-                              : LinearGradient.medi([.mediPrimary.opacity(0.15), .mediSky.opacity(0.1)]),
-                    lineWidth: isFocused ? 1.5 : 1
-                )
-        )
-        .shadow(color: isFocused ? .mediCyan.opacity(0.2) : .clear, radius: 8, y: 2)
-        .animation(.easeOut(duration: 0.2), value: isFocused)
     }
 }
 
