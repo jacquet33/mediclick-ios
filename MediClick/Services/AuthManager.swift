@@ -108,9 +108,13 @@ final class AuthManager {
             self.avatarUrl = avatar
             self.organizations = orgs
             self.activeOrganization = orgs.first
+            if let first = orgs.first {
+                UserDefaults.standard.set(first.id, forKey: "active_org_id")
+            }
             self.isAuthenticated = true
             self.isLoading = false
             self.persistDoctorData()
+            UserDefaults.standard.set(dId, forKey: "doctor_id")
         }
     }
     
@@ -173,6 +177,11 @@ final class AuthManager {
         activeOrganization = org
         UserDefaults.standard.set(org.id, forKey: "active_org_id")
     }
+
+    /// El APIClient lee esto para saber si la sesión sigue viva
+    var hasValidSession: Bool {
+        KeychainHelper.load(key: "access_token") != nil
+    }
     
     // MARK: - Profile image
     
@@ -222,6 +231,9 @@ final class AuthManager {
             }
             let savedId = UserDefaults.standard.string(forKey: "active_org_id")
             activeOrganization = organizations.first { $0.id == savedId } ?? organizations.first
+            if let active = activeOrganization {
+                UserDefaults.standard.set(active.id, forKey: "active_org_id")
+            }
         }
     }
     

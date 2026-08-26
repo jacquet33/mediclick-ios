@@ -24,6 +24,10 @@ struct MainTabView: View {
             ChatListView()
                 .tabItem { Label("Chat", systemImage: "message.fill") }
                 .tag(4)
+
+            BillingView()
+                .tabItem { Label("Facturación", systemImage: "banknote.fill") }
+                .tag(5)
         }
         .tint(Color.mediPrimary)
     }
