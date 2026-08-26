@@ -18,7 +18,7 @@ struct PatientsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.mediBackground.ignoresSafeArea()
+                MediBackground()
                 
                 List {
                     ForEach(filteredPatients) { patient in
@@ -31,7 +31,7 @@ struct PatientsView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(patient.fullName)
                                         .font(.body.weight(.medium))
-                                        .foregroundStyle(Color.mediTextPrimary)
+                                        .foregroundStyle(Color.mediText)
                                     HStack(spacing: 4) {
                                         Image(systemName: "heart.text.clipboard")
                                             .font(.caption2)
@@ -39,7 +39,7 @@ struct PatientsView: View {
                                             .lineLimit(1)
                                     }
                                     .font(.caption)
-                                    .foregroundStyle(Color.mediTextSecondary)
+                                    .foregroundStyle(Color.mediTextSoft)
                                 }
                                 
                                 Spacer()
@@ -79,10 +79,10 @@ struct PatientsView: View {
                             .foregroundStyle(Color.mediPrimary.opacity(0.4))
                         Text("Sin pacientes")
                             .font(.title3.weight(.medium))
-                            .foregroundStyle(Color.mediTextPrimary)
+                            .foregroundStyle(Color.mediText)
                         Text("Agregá tu primer paciente")
                             .font(.subheadline)
-                            .foregroundStyle(Color.mediTextSecondary)
+                            .foregroundStyle(Color.mediTextSoft)
                         Button("Agregar paciente") { showNewPatient = true }
                             .buttonStyle(MediButtonStyle())
                             .frame(width: 200)
@@ -101,7 +101,7 @@ struct PatientDetailView: View {
     
     var body: some View {
         ZStack {
-            Color.mediBackground.ignoresSafeArea()
+            MediBackground()
             
             ScrollView {
                 VStack(spacing: 16) {
@@ -110,11 +110,11 @@ struct PatientDetailView: View {
                         MediAvatar(name: patient.fullName, size: 70)
                         Text(patient.fullName)
                             .font(.title2.bold())
-                            .foregroundStyle(Color.mediTextPrimary)
+                            .foregroundStyle(Color.mediText)
                         if let age = patient.age {
                             Text("\(age) años · DNI \(patient.dni ?? "—")")
                                 .font(.subheadline)
-                                .foregroundStyle(Color.mediTextSecondary)
+                                .foregroundStyle(Color.mediTextSoft)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -132,7 +132,7 @@ struct PatientDetailView: View {
                         MediInfoRow(icon: "envelope.fill", label: "Email", value: patient.email ?? "—")
                         MediInfoRow(icon: "cross.case.fill", label: "Obra social", value: patient.insuranceProvider ?? "—")
                     }
-                    .mediCard()
+                    .mediElevated()
                     
                     // Allergies
                     if !patient.allergies.isEmpty {
@@ -141,10 +141,10 @@ struct PatientDetailView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.mediDanger)
                             FlowLayout(items: patient.allergies) { allergy in
-                                MediBadge(allergy, color: .mediDanger, bgColor: .mediDangerLight)
+                                MediBadge(allergy, color: .mediDanger)
                             }
                         }
-                        .mediCard()
+                        .mediElevated()
                     }
                     
                     // Chronic conditions
@@ -154,10 +154,10 @@ struct PatientDetailView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.mediPrimary)
                             FlowLayout(items: patient.chronicConditions) { cond in
-                                MediBadge(cond, color: .mediPrimary, bgColor: Color.mediPrimary.opacity(0.12))
+                                MediBadge(cond, color: .mediPrimary)
                             }
                         }
-                        .mediCard()
+                        .mediElevated()
                     }
                 }
                 .padding()
@@ -181,11 +181,11 @@ struct MediInfoRow: View {
                 .frame(width: 20)
             Text(label)
                 .font(.subheadline)
-                .foregroundStyle(Color.mediTextSecondary)
+                .foregroundStyle(Color.mediTextSoft)
             Spacer()
             Text(value)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.mediTextPrimary)
+                .foregroundStyle(Color.mediText)
         }
     }
 }
@@ -207,7 +207,7 @@ struct NewPatientView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.mediBackground.ignoresSafeArea()
+                MediBackground()
                 Form {
                     Section {
                         Label("Datos personales", systemImage: "person.fill")

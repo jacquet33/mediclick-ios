@@ -1,103 +1,188 @@
 import SwiftUI
 
-// MARK: - MediClick Medical Theme
+// MARK: - MediClick Premium Medical Theme
 
 extension Color {
-    // Azul médico principal
-    static let mediPrimary = Color(red: 0.16, green: 0.50, blue: 0.73)       // #2980B9
-    static let mediPrimaryLight = Color(red: 0.22, green: 0.60, blue: 0.85)   // #3899D9
-    static let mediPrimaryDark = Color(red: 0.10, green: 0.37, blue: 0.56)    // #1A5E8F
+    // Paleta celeste médica premium
+    static let mediCyan       = Color(red: 0.25, green: 0.78, blue: 0.93)   // #40C7ED
+    static let mediSky        = Color(red: 0.31, green: 0.65, blue: 0.94)   // #4FA6F0
+    static let mediPrimary    = Color(red: 0.16, green: 0.50, blue: 0.83)   // #2980D4
+    static let mediDeep       = Color(red: 0.10, green: 0.35, blue: 0.62)   // #1A599E
+    static let mediMidnight   = Color(red: 0.06, green: 0.22, blue: 0.42)   // #0F386B
     
-    // Celeste suave para fondos
-    static let mediBackground = Color(red: 0.91, green: 0.96, blue: 0.99)     // #E8F5FE
-    static let mediBackgroundCard = Color.white
-    static let mediBackgroundSoft = Color(red: 0.85, green: 0.93, blue: 0.98) // #D9EDFB
+    // Fondos
+    static let mediBg         = Color(red: 0.94, green: 0.98, blue: 1.0)    // #F0FAFF
+    static let mediBgSoft     = Color(red: 0.88, green: 0.95, blue: 0.99)   // #E0F2FD
+    static let mediSurface    = Color.white
     
-    // Verde salud
-    static let mediSuccess = Color(red: 0.15, green: 0.68, blue: 0.38)       // #27AE60
-    static let mediSuccessLight = Color(red: 0.85, green: 0.95, blue: 0.88)   // #D9F2E0
-    
-    // Rojo urgencia
-    static let mediDanger = Color(red: 0.91, green: 0.30, blue: 0.24)        // #E74C3C
-    static let mediDangerLight = Color(red: 0.98, green: 0.89, blue: 0.88)    // #FAE3E0
-    
-    // Naranja atención
-    static let mediWarning = Color(red: 0.95, green: 0.61, blue: 0.07)       // #F39C12
-    static let mediWarningLight = Color(red: 1.0, green: 0.95, blue: 0.85)    // #FFF2D9
+    // Estados
+    static let mediSuccess    = Color(red: 0.13, green: 0.75, blue: 0.55)   // #21BF8C
+    static let mediDanger     = Color(red: 0.95, green: 0.36, blue: 0.40)   // #F25C66
+    static let mediWarning    = Color(red: 1.0, green: 0.70, blue: 0.20)    // #FFB333
     
     // Textos
-    static let mediTextPrimary = Color(red: 0.15, green: 0.22, blue: 0.30)   // #273849
-    static let mediTextSecondary = Color(red: 0.40, green: 0.50, blue: 0.58)  // #668094
-    static let mediTextMuted = Color(red: 0.60, green: 0.68, blue: 0.74)      // #99ADBC
+    static let mediText       = Color(red: 0.11, green: 0.20, blue: 0.31)   // #1C334F
+    static let mediTextSoft   = Color(red: 0.38, green: 0.50, blue: 0.62)   // #61809E
+    static let mediTextMuted  = Color(red: 0.60, green: 0.70, blue: 0.79)   // #99B3C9
 }
 
-// MARK: - Gradient backgrounds
+// MARK: - Premium Gradients
 
-struct MediGradient: View {
-    var body: some View {
-        LinearGradient(
-            colors: [Color.mediPrimary, Color.mediPrimaryLight],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+extension LinearGradient {
+    static let mediHero = LinearGradient(
+        colors: [.mediCyan, .mediSky, .mediPrimary],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let mediDeepHero = LinearGradient(
+        colors: [.mediSky, .mediPrimary, .mediDeep],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let mediGlass = LinearGradient(
+        colors: [.white.opacity(0.9), .white.opacity(0.6)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let mediBorder = LinearGradient(
+        colors: [.mediCyan.opacity(0.6), .mediSky.opacity(0.2), .mediPrimary.opacity(0.5)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let mediShine = LinearGradient(
+        colors: [.white.opacity(0.4), .clear, .white.opacity(0.15)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let mediBackground = LinearGradient(
+        colors: [Color.mediBg, Color.mediBgSoft, Color.mediBg],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+    
+    static func medi(_ colors: [Color]) -> LinearGradient {
+        LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
 
-// MARK: - Medical Card Style
+// MARK: - Premium Card with glass effect + gradient border
 
-struct MediCard: ViewModifier {
+struct MediGlassCard: ViewModifier {
+    var padding: CGFloat = 16
+    var radius: CGFloat = 18
+    
     func body(content: Content) -> some View {
         content
-            .padding(16)
-            .background(Color.mediBackgroundCard)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: Color.mediPrimary.opacity(0.08), radius: 8, x: 0, y: 2)
+            .padding(padding)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: radius)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: radius)
+                        .fill(LinearGradient.mediGlass)
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: radius)
+                    .stroke(LinearGradient.mediBorder, lineWidth: 1)
+            )
+            .shadow(color: .mediPrimary.opacity(0.12), radius: 16, x: 0, y: 6)
+            .shadow(color: .mediCyan.opacity(0.06), radius: 4, x: 0, y: 1)
+    }
+}
+
+// MARK: - Elevated Card (solid white, deep shadow)
+
+struct MediElevatedCard: ViewModifier {
+    var padding: CGFloat = 16
+    var radius: CGFloat = 18
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(Color.mediSurface)
+            .clipShape(RoundedRectangle(cornerRadius: radius))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius)
+                    .stroke(LinearGradient.mediBorder, lineWidth: 1)
+            )
+            .shadow(color: .mediPrimary.opacity(0.10), radius: 20, x: 0, y: 8)
+            .shadow(color: .mediDeep.opacity(0.04), radius: 2, x: 0, y: 1)
+    }
+}
+
+// MARK: - Gradient Card (colored, for stats)
+
+struct MediGradientCard: ViewModifier {
+    let colors: [Color]
+    var padding: CGFloat = 16
+    var radius: CGFloat = 18
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(
+                ZStack {
+                    LinearGradient.medi(colors)
+                    LinearGradient.mediShine
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: radius))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius)
+                    .stroke(.white.opacity(0.3), lineWidth: 1)
+            )
+            .shadow(color: colors.first?.opacity(0.35) ?? .clear, radius: 16, x: 0, y: 8)
     }
 }
 
 extension View {
+    func mediGlass(padding: CGFloat = 16, radius: CGFloat = 18) -> some View {
+        modifier(MediGlassCard(padding: padding, radius: radius))
+    }
+    func mediElevated(padding: CGFloat = 16, radius: CGFloat = 18) -> some View {
+        modifier(MediElevatedCard(padding: padding, radius: radius))
+    }
+    func mediGradientCard(_ colors: [Color], padding: CGFloat = 16, radius: CGFloat = 18) -> some View {
+        modifier(MediGradientCard(colors: colors, padding: padding, radius: radius))
+    }
     func mediCard() -> some View {
-        modifier(MediCard())
+        modifier(MediElevatedCard())
     }
 }
 
-// MARK: - Medical Icon Views
+// MARK: - Premium Background
 
-struct MediIcon: View {
-    let systemName: String
-    var size: CGFloat = 20
-    var color: Color = .mediPrimary
-    
+struct MediBackground: View {
     var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: size))
-            .foregroundStyle(color)
+        ZStack {
+            LinearGradient.mediBackground.ignoresSafeArea()
+            
+            // Decorative blurred circles
+            GeometryReader { geo in
+                Circle()
+                    .fill(LinearGradient.medi([.mediCyan.opacity(0.15), .mediSky.opacity(0.05)]))
+                    .frame(width: geo.size.width * 0.9)
+                    .blur(radius: 60)
+                    .offset(x: -geo.size.width * 0.3, y: -geo.size.height * 0.15)
+                
+                Circle()
+                    .fill(LinearGradient.medi([.mediSky.opacity(0.12), .mediPrimary.opacity(0.04)]))
+                    .frame(width: geo.size.width * 0.7)
+                    .blur(radius: 50)
+                    .offset(x: geo.size.width * 0.5, y: geo.size.height * 0.5)
+            }
+            .ignoresSafeArea()
+        }
     }
 }
 
-struct MediBadge: View {
-    let text: String
-    let color: Color
-    let bgColor: Color
-    
-    init(_ text: String, color: Color = .mediSuccess, bgColor: Color = .mediSuccessLight) {
-        self.text = text
-        self.color = color
-        self.bgColor = bgColor
-    }
-    
-    var body: some View {
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(bgColor)
-            .foregroundStyle(color)
-            .clipShape(Capsule())
-    }
-}
-
-// MARK: - Medical Avatar
+// MARK: - Premium Avatar with gradient ring
 
 struct MediAvatar: View {
     let name: String
@@ -110,72 +195,164 @@ struct MediAvatar: View {
         return "\(first)\(last)".uppercased()
     }
     
-    private var color: Color {
-        let colors: [Color] = [.mediPrimary, .mediSuccess, .mediPrimaryLight, .mediPrimaryDark,
-                                Color(red: 0.56, green: 0.27, blue: 0.68), // purple
-                                Color(red: 0.20, green: 0.60, blue: 0.60)] // teal
-        let index = abs(name.hashValue) % colors.count
-        return colors[index]
+    private var gradientColors: [Color] {
+        let palettes: [[Color]] = [
+            [.mediCyan, .mediSky],
+            [.mediSky, .mediPrimary],
+            [.mediSuccess, .mediCyan],
+            [.mediPrimary, .mediDeep],
+            [Color(red: 0.55, green: 0.45, blue: 0.92), .mediSky],
+            [Color(red: 0.20, green: 0.75, blue: 0.75), .mediCyan],
+        ]
+        return palettes[abs(name.hashValue) % palettes.count]
     }
     
     var body: some View {
         ZStack {
             Circle()
-                .fill(color.opacity(0.15))
+                .fill(LinearGradient.medi(gradientColors))
             Circle()
-                .stroke(color.opacity(0.3), lineWidth: 1)
+                .fill(LinearGradient.mediShine)
+            Circle()
+                .stroke(.white.opacity(0.4), lineWidth: 1.5)
             Text(initials)
-                .font(.system(size: size * 0.35, weight: .semibold))
-                .foregroundStyle(color)
+                .font(.system(size: size * 0.36, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
+        .shadow(color: gradientColors.first?.opacity(0.4) ?? .clear, radius: 8, y: 3)
     }
 }
 
-// MARK: - Medical Button Style
+// MARK: - Premium Badge
+
+struct MediBadge: View {
+    let text: String
+    let color: Color
+    let bgColor: Color
+    
+    init(_ text: String, color: Color = .mediSuccess, bgColor: Color? = nil) {
+        self.text = text
+        self.color = color
+        self.bgColor = bgColor ?? color.opacity(0.12)
+    }
+    
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.bold))
+            .padding(.horizontal, 11)
+            .padding(.vertical, 5)
+            .background(
+                Capsule()
+                    .fill(bgColor)
+                    .overlay(
+                        Capsule().stroke(color.opacity(0.25), lineWidth: 0.5)
+                    )
+            )
+            .foregroundStyle(color)
+    }
+}
+
+// MARK: - Premium Button
 
 struct MediButtonStyle: ButtonStyle {
+    var colors: [Color] = [.mediCyan, .mediPrimary]
     var isSecondary: Bool = false
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .fontWeight(.semibold)
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background(isSecondary ? Color.mediBackgroundSoft : Color.mediPrimary)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(
+                ZStack {
+                    if isSecondary {
+                        Color.mediBgSoft
+                    } else {
+                        LinearGradient.medi(colors)
+                        LinearGradient.mediShine
+                    }
+                }
+            )
             .foregroundStyle(isSecondary ? Color.mediPrimary : .white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(isSecondary ? Color.mediPrimary.opacity(0.2) : .white.opacity(0.3), lineWidth: 1)
+            )
+            .shadow(color: isSecondary ? .clear : (colors.first?.opacity(0.4) ?? .clear),
+                    radius: configuration.isPressed ? 6 : 14,
+                    y: configuration.isPressed ? 2 : 6)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
-// MARK: - Medical Input Style
+// MARK: - Premium TextField
 
 struct MediTextField: View {
     let icon: String
     let placeholder: String
     @Binding var text: String
     var isSecure: Bool = false
+    @FocusState private var isFocused: Bool
     
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundStyle(Color.mediPrimary)
-                .frame(width: 20)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(
+                    isFocused ? LinearGradient.medi([.mediCyan, .mediPrimary])
+                              : LinearGradient.medi([.mediTextMuted, .mediTextMuted])
+                )
+                .frame(width: 22)
             
             if isSecure {
-                SecureField(placeholder, text: $text)
+                SecureField(placeholder, text: $text).focused($isFocused)
             } else {
-                TextField(placeholder, text: $text)
+                TextField(placeholder, text: $text).focused($isFocused)
             }
         }
-        .padding(14)
-        .background(Color.mediBackgroundSoft.opacity(0.6))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.mediPrimary.opacity(0.15), lineWidth: 1)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white.opacity(0.7))
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(
+                    isFocused ? LinearGradient.medi([.mediCyan, .mediPrimary])
+                              : LinearGradient.medi([.mediPrimary.opacity(0.15), .mediSky.opacity(0.1)]),
+                    lineWidth: isFocused ? 1.5 : 1
+                )
+        )
+        .shadow(color: isFocused ? .mediCyan.opacity(0.2) : .clear, radius: 8, y: 2)
+        .animation(.easeOut(duration: 0.2), value: isFocused)
+    }
+}
+
+// MARK: - Section Header
+
+struct MediSectionHeader: View {
+    let title: String
+    let icon: String
+    var color: Color = .mediPrimary
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient.medi([color.opacity(0.2), color.opacity(0.08)]))
+                    .frame(width: 28, height: 28)
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+            Text(title.uppercased())
+                .font(.caption.weight(.bold))
+                .tracking(0.5)
+                .foregroundStyle(Color.mediTextSoft)
+            Spacer()
+        }
     }
 }
 
@@ -184,26 +361,22 @@ struct MediTextField: View {
 struct MediStatus {
     static func color(for status: String) -> Color {
         switch status {
-        case "confirmed": return .mediSuccess
+        case "confirmed", "active": return .mediSuccess
         case "pending": return .mediWarning
         case "in_progress": return .mediPrimary
         case "completed": return .mediTextMuted
-        case "cancelled": return .mediDanger
-        case "active": return .mediSuccess
-        case "expired": return .mediDanger
+        case "cancelled", "expired": return .mediDanger
         default: return .mediTextMuted
         }
     }
     
-    static func bgColor(for status: String) -> Color {
+    static func gradient(for status: String) -> [Color] {
         switch status {
-        case "confirmed": return .mediSuccessLight
-        case "pending": return .mediWarningLight
-        case "in_progress": return Color.mediPrimary.opacity(0.12)
-        case "cancelled": return .mediDangerLight
-        case "active": return .mediSuccessLight
-        case "expired": return .mediDangerLight
-        default: return Color.mediTextMuted.opacity(0.12)
+        case "confirmed", "active": return [.mediSuccess, Color(red: 0.10, green: 0.65, blue: 0.48)]
+        case "pending": return [.mediWarning, Color(red: 0.95, green: 0.60, blue: 0.10)]
+        case "in_progress": return [.mediCyan, .mediPrimary]
+        case "cancelled", "expired": return [.mediDanger, Color(red: 0.85, green: 0.25, blue: 0.30)]
+        default: return [.mediTextMuted, .mediTextSoft]
         }
     }
     

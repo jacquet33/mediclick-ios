@@ -10,105 +10,112 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.mediBackground.ignoresSafeArea()
+                MediBackground()
                 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Header with gradient
-                        VStack(alignment: .leading, spacing: 8) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 22) {
+                        // Hero header
+                        VStack(alignment: .leading, spacing: 6) {
                             HStack {
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: 6) {
                                     Text("Buenos días")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.white.opacity(0.8))
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(.white.opacity(0.85))
                                     Text("Dr. \(auth.currentDoctor?.lastName ?? "Doctor")")
-                                        .font(.title.bold())
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
                                         .foregroundStyle(.white)
                                 }
                                 Spacer()
                                 ZStack {
-                                    Circle()
-                                        .fill(.white.opacity(0.2))
-                                        .frame(width: 50, height: 50)
+                                    Circle().fill(.white.opacity(0.18)).frame(width: 56, height: 56)
+                                    Circle().stroke(.white.opacity(0.35), lineWidth: 1).frame(width: 56, height: 56)
                                     Image(systemName: "stethoscope")
-                                        .font(.title2)
+                                        .font(.system(size: 24, weight: .medium))
                                         .foregroundStyle(.white)
                                 }
                             }
+                            
+                            Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)).capitalized)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.7))
+                                .padding(.top, 4)
                         }
-                        .padding(20)
+                        .padding(22)
                         .background(
-                            LinearGradient(
-                                colors: [Color.mediPrimary, Color.mediPrimaryLight],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .padding(.horizontal)
-                        
-                        // Stats
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            StatCardMedi(icon: "calendar.badge.clock", title: "Turnos hoy", value: "\(todayAppointments.count)", color: .mediPrimary)
-                            StatCardMedi(icon: "person.2.fill", title: "Pacientes", value: "\(patients.count)", color: .mediSuccess)
-                            StatCardMedi(icon: "doc.text.fill", title: "Recetas", value: "23", color: .mediPrimaryLight)
-                            StatCardMedi(icon: "message.fill", title: "Mensajes", value: "5", color: .mediWarning)
-                        }
-                        .padding(.horizontal)
-                        
-                        // Próximos turnos
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "clock.fill")
-                                    .foregroundStyle(Color.mediPrimary)
-                                Text("PRÓXIMOS TURNOS")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color.mediTextSecondary)
+                            ZStack {
+                                LinearGradient.mediHero
+                                LinearGradient.mediShine
                             }
-                            .padding(.horizontal)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 22))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22)
+                                .stroke(.white.opacity(0.25), lineWidth: 1)
+                        )
+                        .shadow(color: .mediPrimary.opacity(0.35), radius: 22, y: 10)
+                        
+                        // Stats grid
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
+                            StatCardPro(icon: "calendar.badge.clock", title: "Turnos hoy",
+                                        value: "\(todayAppointments.count)", colors: [.mediCyan, .mediSky])
+                            StatCardPro(icon: "person.2.fill", title: "Pacientes",
+                                        value: "\(patients.count)", colors: [.mediSuccess, Color(red: 0.10, green: 0.65, blue: 0.48)])
+                            StatCardPro(icon: "cross.case.fill", title: "Recetas",
+                                        value: "23", colors: [.mediSky, .mediPrimary])
+                            StatCardPro(icon: "message.fill", title: "Mensajes",
+                                        value: "5", colors: [.mediWarning, Color(red: 0.95, green: 0.55, blue: 0.10)])
+                        }
+                        
+                        // Appointments
+                        VStack(alignment: .leading, spacing: 14) {
+                            MediSectionHeader(title: "Próximos turnos", icon: "clock.fill")
                             
                             if todayAppointments.isEmpty {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "calendar.badge.checkmark")
-                                        .font(.system(size: 40))
-                                        .foregroundStyle(Color.mediPrimary.opacity(0.4))
+                                VStack(spacing: 14) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(LinearGradient.medi([.mediCyan.opacity(0.15), .mediSky.opacity(0.05)]))
+                                            .frame(width: 80, height: 80)
+                                        Image(systemName: "calendar.badge.checkmark")
+                                            .font(.system(size: 34))
+                                            .foregroundStyle(LinearGradient.medi([.mediCyan, .mediSky]))
+                                    }
                                     Text("Sin turnos programados")
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.mediTextSecondary)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(Color.mediTextSoft)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 40)
-                                .mediCard()
-                                .padding(.horizontal)
+                                .padding(.vertical, 36)
+                                .mediGlass()
                             } else {
                                 ForEach(todayAppointments.prefix(5)) { appt in
-                                    AppointmentRowMedi(appointment: appt)
-                                        .padding(.horizontal)
+                                    AppointmentRowPro(appointment: appt)
                                 }
                             }
                         }
                     }
-                    .padding(.vertical)
+                    .padding(20)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button { } label: {
-                            Label("Mi perfil", systemImage: "person.circle")
-                        }
-                        Button { } label: {
-                            Label("Configuración", systemImage: "gear")
-                        }
+                        Button { } label: { Label("Mi perfil", systemImage: "person.circle") }
+                        Button { } label: { Label("Configuración", systemImage: "gear") }
                         Divider()
                         Button(role: .destructive) { auth.logout() } label: {
                             Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
                         }
                     } label: {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(Color.mediPrimary)
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient.medi([.mediCyan.opacity(0.15), .mediSky.opacity(0.1)]))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(LinearGradient.medi([.mediPrimary, .mediDeep]))
+                        }
                     }
                 }
             }
@@ -116,75 +123,79 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Stat Card Medical
-
-struct StatCardMedi: View {
+struct StatCardPro: View {
     let icon: String
     let title: String
     let value: String
-    let color: Color
+    let colors: [Color]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(.white.opacity(0.25))
+                    .frame(width: 38, height: 38)
                 Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(color)
-                Spacer()
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
             }
+            
             Text(value)
-                .font(.title.bold())
-                .foregroundStyle(color)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            
             Text(title)
-                .font(.caption)
-                .foregroundStyle(Color.mediTextSecondary)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.white.opacity(0.85))
         }
-        .mediCard()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .mediGradientCard(colors, padding: 16)
     }
 }
 
-// MARK: - Appointment Row Medical
-
-struct AppointmentRowMedi: View {
+struct AppointmentRowPro: View {
     let appointment: LocalAppointment
     
     var body: some View {
         HStack(spacing: 14) {
-            // Time pill
-            VStack(spacing: 2) {
-                Image(systemName: "clock")
-                    .font(.caption2)
-                    .foregroundStyle(Color.mediPrimary)
+            // Time badge with gradient
+            VStack(spacing: 3) {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 10))
                 Text(appointment.formattedStartTime)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.mediPrimary)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
             }
-            .frame(width: 55)
-            .padding(.vertical, 8)
-            .background(Color.mediPrimary.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .foregroundStyle(.white)
+            .frame(width: 58, height: 52)
+            .background(
+                ZStack {
+                    LinearGradient.medi(MediStatus.gradient(for: appointment.status))
+                    LinearGradient.mediShine
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: MediStatus.color(for: appointment.status).opacity(0.3), radius: 8, y: 3)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(appointment.patient?.fullName ?? "Paciente")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.mediTextPrimary)
-                HStack(spacing: 4) {
-                    Image(systemName: "cross.case")
-                        .font(.caption2)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.mediText)
+                HStack(spacing: 5) {
+                    Image(systemName: "cross.case.fill").font(.system(size: 9))
                     Text(appointment.reason ?? "Consulta")
                         .font(.caption)
+                        .lineLimit(1)
                 }
-                .foregroundStyle(Color.mediTextSecondary)
+                .foregroundStyle(Color.mediTextSoft)
             }
             
             Spacer()
             
             MediBadge(
                 MediStatus.label(for: appointment.status),
-                color: MediStatus.color(for: appointment.status),
-                bgColor: MediStatus.bgColor(for: appointment.status)
+                color: MediStatus.color(for: appointment.status)
             )
         }
-        .mediCard()
+        .mediElevated(padding: 14)
     }
 }

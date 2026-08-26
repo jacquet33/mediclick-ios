@@ -6,34 +6,58 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var showRegister = false
+    @State private var animateLogo = false
     
     var body: some View {
         ZStack {
-            Color.mediBackground.ignoresSafeArea()
+            MediBackground()
             
-            ScrollView {
-                VStack(spacing: 28) {
-                    Spacer().frame(height: 40)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 26) {
+                    Spacer().frame(height: 50)
                     
-                    // Logo
-                    VStack(spacing: 12) {
+                    // Premium logo with glow
+                    VStack(spacing: 14) {
                         ZStack {
+                            // Outer glow
                             Circle()
-                                .fill(Color.mediPrimary)
-                                .frame(width: 90, height: 90)
+                                .fill(LinearGradient.medi([.mediCyan.opacity(0.3), .mediSky.opacity(0.1)]))
+                                .frame(width: 130, height: 130)
+                                .blur(radius: 20)
+                            
+                            // Main circle
+                            Circle()
+                                .fill(LinearGradient.mediHero)
+                                .frame(width: 96, height: 96)
+                            
+                            Circle()
+                                .fill(LinearGradient.mediShine)
+                                .frame(width: 96, height: 96)
+                            
+                            Circle()
+                                .stroke(.white.opacity(0.4), lineWidth: 1.5)
+                                .frame(width: 96, height: 96)
+                            
                             Image(systemName: "stethoscope")
-                                .font(.system(size: 40))
+                                .font(.system(size: 42, weight: .medium))
                                 .foregroundStyle(.white)
+                                .shadow(color: .mediDeep.opacity(0.3), radius: 4, y: 2)
                         }
+                        .shadow(color: .mediCyan.opacity(0.4), radius: 24, y: 10)
+                        .scaleEffect(animateLogo ? 1 : 0.9)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: animateLogo)
+                        
                         Text("MediClick")
-                            .font(.largeTitle.bold())
-                            .foregroundStyle(Color.mediPrimaryDark)
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(LinearGradient.medi([.mediPrimary, .mediDeep]))
+                        
                         Text("Gestión médica integral")
                             .font(.subheadline)
-                            .foregroundStyle(Color.mediTextSecondary)
+                            .foregroundStyle(Color.mediTextSoft)
                     }
+                    .onAppear { animateLogo = true }
                     
-                    // OAuth buttons
+                    // OAuth
                     VStack(spacing: 12) {
                         SignInWithAppleButton(.signIn) { request in
                             request.requestedScopes = [.fullName, .email]
@@ -42,7 +66,8 @@ struct LoginView: View {
                         }
                         .signInWithAppleButtonStyle(.black)
                         .frame(height: 52)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
                         
                         Button {
                             Task { await auth.loginWithGoogle() }
@@ -50,29 +75,36 @@ struct LoginView: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "g.circle.fill")
                                     .font(.title2)
+                                    .foregroundStyle(LinearGradient.medi([.mediSky, .mediPrimary]))
                                 Text("Continuar con Google")
-                                    .fontWeight(.medium)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Color.mediText)
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
+                            .frame(maxWidth: .infinity, minHeight: 52)
                             .background(Color.white)
-                            .foregroundStyle(Color.mediTextPrimary)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(LinearGradient.mediBorder, lineWidth: 1)
+                            )
+                            .shadow(color: .mediPrimary.opacity(0.12), radius: 12, y: 4)
                         }
                     }
-                    .padding(.horizontal, 4)
                     
                     // Divider
-                    HStack {
-                        Rectangle().frame(height: 0.5).foregroundStyle(Color.mediPrimary.opacity(0.2))
+                    HStack(spacing: 12) {
+                        Rectangle()
+                            .fill(LinearGradient.medi([.clear, .mediPrimary.opacity(0.25)]))
+                            .frame(height: 1)
                         Text("o con email")
-                            .font(.caption)
-                            .foregroundStyle(Color.mediTextSecondary)
-                        Rectangle().frame(height: 0.5).foregroundStyle(Color.mediPrimary.opacity(0.2))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.mediTextSoft)
+                        Rectangle()
+                            .fill(LinearGradient.medi([.mediPrimary.opacity(0.25), .clear]))
+                            .frame(height: 1)
                     }
                     
-                    // Email/Password
+                    // Form
                     VStack(spacing: 14) {
                         MediTextField(icon: "envelope.fill", placeholder: "Email", text: $email)
                             .textContentType(.emailAddress)
@@ -83,13 +115,15 @@ struct LoginView: View {
                             .textContentType(.password)
                         
                         if let error = auth.errorMessage {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(Color.mediDanger)
-                                Text(error)
-                                    .font(.caption)
-                                    .foregroundStyle(Color.mediDanger)
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                Text(error).font(.caption)
                             }
+                            .foregroundStyle(Color.mediDanger)
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.mediDanger.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         
                         Button {
@@ -98,7 +132,7 @@ struct LoginView: View {
                             if auth.isLoading {
                                 ProgressView().tint(.white)
                             } else {
-                                HStack {
+                                HStack(spacing: 8) {
                                     Image(systemName: "stethoscope")
                                     Text("Iniciar sesión")
                                 }
@@ -106,21 +140,26 @@ struct LoginView: View {
                         }
                         .buttonStyle(MediButtonStyle())
                         .disabled(email.isEmpty || password.isEmpty || auth.isLoading)
+                        .opacity(email.isEmpty || password.isEmpty ? 0.6 : 1)
                     }
-                    .padding(.horizontal, 4)
                     
-                    Button("¿No tenés cuenta? Registrate") {
+                    Button {
                         showRegister = true
+                    } label: {
+                        Text("¿No tenés cuenta? ")
+                            .foregroundStyle(Color.mediTextSoft)
+                        + Text("Registrate")
+                            .foregroundStyle(Color.mediPrimary)
+                            .fontWeight(.semibold)
                     }
                     .font(.subheadline)
-                    .foregroundStyle(Color.mediPrimary)
+                    
+                    Spacer().frame(height: 30)
                 }
                 .padding(.horizontal, 24)
             }
         }
-        .sheet(isPresented: $showRegister) {
-            RegisterView()
-        }
+        .sheet(isPresented: $showRegister) { RegisterView() }
     }
     
     private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
@@ -132,16 +171,10 @@ struct LoginView: View {
                   let authCodeData = credential.authorizationCode,
                   let authCode = String(data: authCodeData, encoding: .utf8)
             else { return }
-            await auth.loginWithApple(
-                identityToken: identityToken,
-                authorizationCode: authCode,
-                fullName: credential.fullName,
-                email: credential.email
-            )
+            await auth.loginWithApple(identityToken: identityToken, authorizationCode: authCode,
+                                       fullName: credential.fullName, email: credential.email)
         case .failure(let error):
-            await MainActor.run {
-                auth.errorMessage = "Error con Apple Sign-In: \(error.localizedDescription)"
-            }
+            await MainActor.run { auth.errorMessage = "Error: \(error.localizedDescription)" }
         }
     }
 }
@@ -158,41 +191,45 @@ struct RegisterView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.mediBackground.ignoresSafeArea()
-                Form {
-                    Section("Datos personales") {
-                        TextField("Nombre", text: $firstName)
-                        TextField("Apellido", text: $lastName)
-                        TextField("Email", text: $email)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                        SecureField("Contraseña", text: $password)
-                    }
-                    Section("Datos profesionales") {
-                        HStack {
-                            Image(systemName: "cross.case.fill").foregroundStyle(Color.mediPrimary)
-                            TextField("Matrícula", text: $medicalLicense)
+                MediBackground()
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        VStack(spacing: 14) {
+                            MediSectionHeader(title: "Datos personales", icon: "person.fill")
+                            MediTextField(icon: "person", placeholder: "Nombre", text: $firstName)
+                            MediTextField(icon: "person", placeholder: "Apellido", text: $lastName)
+                            MediTextField(icon: "envelope.fill", placeholder: "Email", text: $email)
+                                .keyboardType(.emailAddress).autocapitalization(.none)
+                            MediTextField(icon: "lock.fill", placeholder: "Contraseña", text: $password, isSecure: true)
                         }
-                        HStack {
-                            Image(systemName: "stethoscope").foregroundStyle(Color.mediPrimary)
-                            TextField("Especialidad", text: $specialty)
+                        .mediElevated(padding: 18)
+                        
+                        VStack(spacing: 14) {
+                            MediSectionHeader(title: "Datos profesionales", icon: "cross.case.fill")
+                            MediTextField(icon: "creditcard.fill", placeholder: "Matrícula", text: $medicalLicense)
+                            MediTextField(icon: "stethoscope", placeholder: "Especialidad", text: $specialty)
                         }
+                        .mediElevated(padding: 18)
+                        
+                        Button {
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                Text("Crear cuenta")
+                            }
+                        }
+                        .buttonStyle(MediButtonStyle())
+                        .disabled(firstName.isEmpty || email.isEmpty || medicalLicense.isEmpty)
                     }
-                    Section {
-                        Button("Crear cuenta") { dismiss() }
-                            .frame(maxWidth: .infinity)
-                            .foregroundStyle(Color.mediPrimary)
-                            .disabled(firstName.isEmpty || email.isEmpty || medicalLicense.isEmpty)
-                    }
+                    .padding(20)
                 }
-                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Registro")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }
+                    Button("Cancelar") { dismiss() }.foregroundStyle(Color.mediPrimary)
                 }
             }
         }
