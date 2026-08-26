@@ -19,26 +19,67 @@ workflows:
     scripts:
       - name: Install XcodeGen
         script: brew install xcodegen
+
       - name: Generate Xcode project
         script: xcodegen generate
+
       - name: Set build number
         script: |
-          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID" 2>/dev/null || echo "0")
-          NEW=$(($LATEST + 1))
-          echo "Latest TestFlight build: $LATEST → using $NEW"
-          agvtool new-version -all $NEW
+          set -e
+          # Último build en TestFlight; si falla, arrancamos de 0
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID" 2>/dev/null || echo "")
+          if ! [[ "$LATEST" =~ ^[0-9]+$ ]]; then
+            echo "No pude leer el último build de TestFlight, uso timestamp"
+            NEW=$(date +%s)
+          else
+            NEW=$((LATEST + 1))
+          fi
+
+          echo "Build number: $NEW"
+          agvtool new-version -all "$NEW"
+
+          # Verificar que efectivamente quedó escrito
+          COUNT=$(grep -c "CURRENT_PROJECT_VERSION = $NEW" MediClick.xcodeproj/project.pbxproj || echo "0")
+          if [ "$COUNT" -eq 0 ]; then
+            echo "agvtool no escribió el valor, lo pongo con sed"
+            sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = $NEW;/g" MediClick.xcodeproj/project.pbxproj
+          fi
+          grep -m2 "CURRENT_PROJECT_VERSION" MediClick.xcodeproj/project.pbxproj
+
       - name: Set up keychain
         script: keychain initialize
+
       - name: Fetch signing files
         script: app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+
       - name: Add certificates
         script: keychain add-certificates
+
       - name: Set up profiles
         script: xcode-project use-profiles
+
       - name: Build IPA
         script: xcode-project build-ipa --project MediClick.xcodeproj --scheme "$XCODE_SCHEME"
+
+      - name: Verify Info.plist
+        script: |
+          set -e
+          IPA=$(ls build/ios/ipa/*.ipa | head -1)
+          rm -rf /tmp/ipacheck && mkdir -p /tmp/ipacheck
+          unzip -q "$IPA" -d /tmp/ipacheck
+          PLIST=$(find /tmp/ipacheck/Payload -name "Info.plist" -maxdepth 2 | head -1)
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PLIST" 2>/dev/null || echo "")
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null || echo "")
+          echo "CFBundleShortVersionString: $VERSION"
+          echo "CFBundleVersion: $BUILD"
+          if [ -z "$BUILD" ]; then
+            echo "ERROR: el IPA salió sin CFBundleVersion, App Store lo va a rechazar"
+            exit 1
+          fi
+
       - name: Upload to TestFlight
         script: app-store-connect publish --path build/ios/ipa/*.ipa
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
