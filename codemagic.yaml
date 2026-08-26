@@ -21,19 +21,12 @@ workflows:
         script: brew install xcodegen
       - name: Generate Xcode project
         script: xcodegen generate
-      - name: Inject ATS exception
+      - name: Set build number
         script: |
-          # Build once to generate Info.plist, then modify it
-          # Approach: override via xcconfig
-          cat > ats.xcconfig << 'XCEOF'
-          GENERATE_INFOPLIST_FILE = YES
-          XCEOF
-          
-          # Add ATS directly to the pbxproj build settings
-          # Using sed to add the key after GENERATE_INFOPLIST_FILE
-          PBXPROJ="MediClick.xcodeproj/project.pbxproj"
-          sed -i '' 's/GENERATE_INFOPLIST_FILE = YES;/GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads = YES;/g' "$PBXPROJ"
-          echo "ATS exception injected"
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID" 2>/dev/null || echo "0")
+          NEW=$(($LATEST + 1))
+          echo "Latest TestFlight build: $LATEST → using $NEW"
+          agvtool new-version -all $NEW
       - name: Set up keychain
         script: keychain initialize
       - name: Fetch signing files
