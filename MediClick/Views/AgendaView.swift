@@ -9,162 +9,213 @@ struct AgendaView: View {
     
     private var weekDates: [Date] {
         let cal = Calendar.current
-        let startOfWeek = cal.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
-        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: startOfWeek) }
+        let start = cal.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
+        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
+    }
+    
+    private var dayAppointments: [LocalAppointment] {
+        appointments.filter { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
     }
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Week strip
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(weekDates, id: \.self) { date in
-                            DayButton(date: date, isSelected: Calendar.current.isDate(date, inSameDayAs: selectedDate)) {
-                                selectedDate = date
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
-                }
-                .background(.gray.opacity(0.04))
+            ZStack {
+                MediBackground()
                 
-                // Appointments list
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        if appointments.isEmpty {
-                            ContentUnavailableView {
-                                Label("Sin turnos", systemImage: "calendar.badge.minus")
-                            } description: {
-                                Text("No hay turnos para este día")
-                            }
-                            .frame(height: 300)
-                        } else {
-                            ForEach(appointments) { appt in
-                                NavigationLink {
-                                    AppointmentDetailView(appointment: appt)
-                                } label: {
-                                    AppointmentRowPro(appointment: appt)
+                VStack(spacing: 0) {
+                    // Week strip
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(weekDates, id: \.self) { date in
+                                DayChip(date: date,
+                                        isSelected: Calendar.current.isDate(date, inSameDayAs: selectedDate),
+                                        count: appointments.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }.count) {
+                                    withAnimation(.spring(response: 0.3)) { selectedDate = date }
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
                     }
-                    .padding()
+                    
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 12) {
+                            if dayAppointments.isEmpty {
+                                EmptyStateMedi(
+                                    icon: "calendar.badge.plus",
+                                    title: "Sin turnos",
+                                    subtitle: "No hay turnos para este día",
+                                    actionTitle: "Agendar turno"
+                                ) { showNewAppointment = true }
+                                .padding(.top, 60)
+                            } else {
+                                ForEach(dayAppointments) { appt in
+                                    NavigationLink {
+                                        AppointmentDetailView(appointment: appt)
+                                    } label: {
+                                        AppointmentRowPro(appointment: appt)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .padding(20)
+                    }
                 }
             }
             .navigationTitle("Agenda")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showNewAppointment = true } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient.mediHero)
+                                .frame(width: 34, height: 34)
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .shadow(color: .mediCyan.opacity(0.4), radius: 8, y: 3)
                     }
                 }
             }
-            .sheet(isPresented: $showNewAppointment) {
-                NewAppointmentView()
-            }
+            .sheet(isPresented: $showNewAppointment) { NewAppointmentView() }
         }
     }
 }
 
-struct DayButton: View {
+struct DayChip: View {
     let date: Date
     let isSelected: Bool
+    let count: Int
     let action: () -> Void
     
-    private var dayName: String {
-        date.formatted(.dateTime.weekday(.abbreviated)).capitalized
-    }
-    private var dayNumber: String {
-        date.formatted(.dateTime.day())
-    }
+    private var dayName: String { date.formatted(.dateTime.weekday(.abbreviated)).capitalized }
+    private var dayNumber: String { date.formatted(.dateTime.day()) }
+    private var isToday: Bool { Calendar.current.isDateInToday(date) }
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 5) {
                 Text(dayName)
-                    .font(.caption2)
-                    .foregroundStyle(isSelected ? .white.opacity(0.8) : .secondary)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(isSelected ? .white.opacity(0.9) : Color.mediTextSoft)
                 Text(dayNumber)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(isSelected ? .white : .primary)
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .foregroundStyle(isSelected ? .white : Color.mediText)
+                if count > 0 {
+                    Circle()
+                        .fill(isSelected ? .white : Color.mediCyan)
+                        .frame(width: 5, height: 5)
+                } else {
+                    Circle().fill(.clear).frame(width: 5, height: 5)
+                }
             }
-            .frame(width: 44, height: 56)
-            .background(isSelected ? .blue : .gray.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .frame(width: 52, height: 72)
+            .background(
+                ZStack {
+                    if isSelected {
+                        LinearGradient.mediHero
+                        LinearGradient.mediShine
+                    } else {
+                        Color.white.opacity(0.7)
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(isSelected ? .white.opacity(0.3) : (isToday ? Color.mediCyan.opacity(0.5) : Color.mediPrimary.opacity(0.12)),
+                            lineWidth: isToday && !isSelected ? 1.5 : 1)
+            )
+            .shadow(color: isSelected ? .mediCyan.opacity(0.35) : .mediPrimary.opacity(0.06),
+                    radius: isSelected ? 12 : 4, y: isSelected ? 5 : 1)
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Appointment Detail
-
 struct AppointmentDetailView: View {
     let appointment: LocalAppointment
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        List {
-            Section("Paciente") {
-                if let patient = appointment.patient {
-                    HStack {
-                        MediAvatar(name: patient.fullName, size: 44)
-                        VStack(alignment: .leading) {
-                            Text(patient.fullName).font(.headline)
-                            Text(patient.phone ?? "").font(.caption).foregroundStyle(.secondary)
+        ZStack {
+            MediBackground()
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    // Header
+                    VStack(spacing: 12) {
+                        MediAvatar(name: appointment.patient?.fullName ?? "?", size: 64)
+                        Text(appointment.patient?.fullName ?? "Paciente")
+                            .font(.title3.bold())
+                            .foregroundStyle(Color.mediText)
+                        MediBadge(MediStatus.label(for: appointment.status),
+                                  color: MediStatus.color(for: appointment.status))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .mediElevated(padding: 20)
+                    
+                    VStack(spacing: 12) {
+                        MediSectionHeader(title: "Detalle del turno", icon: "calendar")
+                        MediInfoRow(icon: "calendar", label: "Fecha", value: appointment.date.formatted(date: .long, time: .omitted))
+                        MediInfoRow(icon: "clock.fill", label: "Hora", value: appointment.formattedStartTime)
+                        if let reason = appointment.reason {
+                            MediInfoRow(icon: "cross.case.fill", label: "Motivo", value: reason)
+                        }
+                        if appointment.isFirstVisit {
+                            MediInfoRow(icon: "star.fill", label: "Tipo", value: "Primera visita")
+                        }
+                    }
+                    .mediElevated()
+                    
+                    VStack(spacing: 10) {
+                        if appointment.status == "pending" {
+                            Button {
+                                appointment.status = "confirmed"
+                                try? modelContext.save()
+                            } label: {
+                                Label("Confirmar turno", systemImage: "checkmark.circle.fill")
+                            }
+                            .buttonStyle(MediButtonStyle(colors: [.mediSuccess, Color(red: 0.10, green: 0.65, blue: 0.48)]))
+                        }
+                        if appointment.status == "confirmed" {
+                            Button {
+                                appointment.status = "in_progress"
+                                try? modelContext.save()
+                            } label: {
+                                Label("Iniciar consulta", systemImage: "play.circle.fill")
+                            }
+                            .buttonStyle(MediButtonStyle())
+                        }
+                        if appointment.status == "in_progress" {
+                            Button {
+                                appointment.status = "completed"
+                                try? modelContext.save()
+                            } label: {
+                                Label("Completar consulta", systemImage: "checkmark.seal.fill")
+                            }
+                            .buttonStyle(MediButtonStyle(colors: [.mediSuccess, Color(red: 0.10, green: 0.65, blue: 0.48)]))
+                        }
+                        if appointment.status != "cancelled" && appointment.status != "completed" {
+                            Button {
+                                appointment.status = "cancelled"
+                                appointment.cancelledAt = Date()
+                                try? modelContext.save()
+                            } label: {
+                                Label("Cancelar turno", systemImage: "xmark.circle.fill")
+                            }
+                            .buttonStyle(MediButtonStyle(isSecondary: true))
                         }
                     }
                 }
-            }
-            Section("Turno") {
-                LabeledContent("Fecha", value: appointment.date.formatted(date: .long, time: .omitted))
-                LabeledContent("Hora", value: "\(appointment.formattedStartTime)")
-                LabeledContent("Estado", value: appointment.status.capitalized)
-                if let reason = appointment.reason {
-                    LabeledContent("Motivo", value: reason)
-                }
-            }
-            Section {
-                if appointment.status == "pending" {
-                    Button("Confirmar turno") {
-                        appointment.status = "confirmed"
-                        try? modelContext.save()
-                    }
-                    .foregroundStyle(Color.mediSuccess)
-                }
-                if appointment.status == "confirmed" {
-                    Button("Iniciar consulta") {
-                        appointment.status = "in_progress"
-                        try? modelContext.save()
-                    }
-                    .foregroundStyle(Color.mediPrimary)
-                }
-                if appointment.status == "in_progress" {
-                    Button("Completar consulta") {
-                        appointment.status = "completed"
-                        try? modelContext.save()
-                    }
-                    .foregroundStyle(Color.mediSuccess)
-                }
-                if appointment.status != "cancelled" && appointment.status != "completed" {
-                    Button("Cancelar turno", role: .destructive) {
-                        appointment.status = "cancelled"
-                        appointment.cancelledAt = Date()
-                        try? modelContext.save()
-                    }
-                }
+                .padding(20)
             }
         }
-        .navigationTitle("Detalle del turno")
+        .navigationTitle("Turno")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
-
-// MARK: - New Appointment
 
 struct NewAppointmentView: View {
     @Environment(\.dismiss) private var dismiss
@@ -179,37 +230,72 @@ struct NewAppointmentView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Paciente") {
-                    Picker("Seleccionar", selection: $selectedPatient) {
-                        Text("Elegir paciente...").tag(nil as LocalPatient?)
-                        ForEach(patients) { p in
-                            Text(p.fullName).tag(p as LocalPatient?)
+            ZStack {
+                MediBackground()
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 18) {
+                        VStack(spacing: 14) {
+                            MediSectionHeader(title: "Paciente", icon: "person.fill")
+                            Menu {
+                                ForEach(patients) { p in
+                                    Button(p.fullName) { selectedPatient = p }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "person.circle.fill")
+                                        .foregroundStyle(Color.mediPrimary)
+                                    Text(selectedPatient?.fullName ?? "Seleccionar paciente")
+                                        .foregroundStyle(selectedPatient == nil ? Color.mediTextMuted : Color.mediText)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.mediPrimary)
+                                }
+                                .padding(16)
+                                .background(Color.white.opacity(0.7))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.mediPrimary.opacity(0.15), lineWidth: 1)
+                                )
+                            }
                         }
+                        .mediElevated(padding: 18)
+                        
+                        VStack(spacing: 14) {
+                            MediSectionHeader(title: "Fecha y hora", icon: "calendar.badge.clock")
+                            DatePicker("Fecha", selection: $date, displayedComponents: .date)
+                                .tint(Color.mediPrimary)
+                            DatePicker("Hora", selection: $startTime, displayedComponents: .hourAndMinute)
+                                .tint(Color.mediPrimary)
+                            Toggle("Primera visita", isOn: $isFirstVisit)
+                                .tint(Color.mediCyan)
+                        }
+                        .mediElevated(padding: 18)
+                        
+                        VStack(spacing: 14) {
+                            MediSectionHeader(title: "Motivo", icon: "cross.case.fill")
+                            MediTextField(icon: "text.alignleft", placeholder: "Motivo de la consulta", text: $reason)
+                        }
+                        .mediElevated(padding: 18)
+                        
+                        Button {
+                            createAppointment()
+                        } label: {
+                            Label("Crear turno", systemImage: "calendar.badge.plus")
+                        }
+                        .buttonStyle(MediButtonStyle())
+                        .disabled(selectedPatient == nil)
+                        .opacity(selectedPatient == nil ? 0.6 : 1)
                     }
-                }
-                Section("Fecha y hora") {
-                    DatePicker("Fecha", selection: $date, displayedComponents: .date)
-                    DatePicker("Hora", selection: $startTime, displayedComponents: .hourAndMinute)
-                    Toggle("Primera visita", isOn: $isFirstVisit)
-                }
-                Section("Motivo") {
-                    TextField("Motivo de la consulta", text: $reason, axis: .vertical)
-                        .lineLimit(3)
-                }
-                Section {
-                    Button("Crear turno") {
-                        createAppointment()
-                    }
-                    .frame(maxWidth: .infinity)
-                    .disabled(selectedPatient == nil)
+                    .padding(20)
                 }
             }
             .navigationTitle("Nuevo turno")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }
+                    Button("Cancelar") { dismiss() }.foregroundStyle(Color.mediPrimary)
                 }
             }
         }
@@ -218,17 +304,51 @@ struct NewAppointmentView: View {
     private func createAppointment() {
         guard let patient = selectedPatient else { return }
         let endTime = Calendar.current.date(byAdding: .minute, value: 30, to: startTime) ?? startTime
-        let appt = LocalAppointment(
-            doctorId: UUID(),
-            patient: patient,
-            date: date,
-            startTime: startTime,
-            endTime: endTime
-        )
-        appt.reason = reason
+        let appt = LocalAppointment(doctorId: UUID(), patient: patient, date: date, startTime: startTime, endTime: endTime)
+        appt.reason = reason.isEmpty ? "Consulta" : reason
         appt.isFirstVisit = isFirstVisit
         modelContext.insert(appt)
         try? modelContext.save()
         dismiss()
+    }
+}
+
+// MARK: - Reusable Empty State
+
+struct EmptyStateMedi: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient.medi([.mediCyan.opacity(0.18), .mediSky.opacity(0.06)]))
+                    .frame(width: 96, height: 96)
+                Image(systemName: icon)
+                    .font(.system(size: 38, weight: .light))
+                    .foregroundStyle(LinearGradient.medi([.mediCyan, .mediSky]))
+            }
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.mediText)
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(Color.mediTextSoft)
+                .multilineTextAlignment(.center)
+            
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Label(actionTitle, systemImage: "plus.circle.fill")
+                }
+                .buttonStyle(MediButtonStyle())
+                .frame(maxWidth: 240)
+                .padding(.top, 6)
+            }
+        }
+        .padding(30)
     }
 }

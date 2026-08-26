@@ -3,96 +3,126 @@ import SwiftData
 
 struct PrescriptionsView: View {
     @Query(sort: \LocalPrescription.issuedAt, order: .reverse) private var prescriptions: [LocalPrescription]
-    @State private var showNewPrescription = false
+    @State private var showNew = false
+    @State private var searchText = ""
+    
+    var filtered: [LocalPrescription] {
+        if searchText.isEmpty { return prescriptions }
+        return prescriptions.filter {
+            $0.diagnosis.localizedCaseInsensitiveContains(searchText) ||
+            ($0.patient?.fullName ?? "").localizedCaseInsensitiveContains(searchText)
+        }
+    }
     
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(prescriptions) { rx in
-                    NavigationLink {
-                        PrescriptionDetailView(prescription: rx)
-                    } label: {
-                        PrescriptionRow(prescription: rx)
+            ZStack {
+                MediBackground()
+                
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 12) {
+                        if prescriptions.isEmpty {
+                            EmptyStateMedi(
+                                icon: "cross.case.fill",
+                                title: "Sin recetas",
+                                subtitle: "Las recetas emitidas aparecerán acá",
+                                actionTitle: "Emitir receta"
+                            ) { showNew = true }
+                            .padding(.top, 60)
+                        } else {
+                            ForEach(filtered) { rx in
+                                NavigationLink {
+                                    PrescriptionDetailView(prescription: rx)
+                                } label: {
+                                    PrescriptionCardPro(prescription: rx)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
+                    .padding(20)
                 }
+                .searchable(text: $searchText, prompt: "Buscar receta o paciente")
             }
             .navigationTitle("Recetas")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showNewPrescription = true } label: {
-                        Image(systemName: "plus.circle.fill")
+                    Button { showNew = true } label: {
+                        ZStack {
+                            Circle().fill(LinearGradient.mediHero).frame(width: 34, height: 34)
+                            Image(systemName: "plus").font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+                        }
+                        .shadow(color: .mediCyan.opacity(0.4), radius: 8, y: 3)
                     }
                 }
             }
-            .overlay {
-                if prescriptions.isEmpty {
-                    ContentUnavailableView {
-                        Label("Sin recetas", systemImage: "doc.text")
-                    } description: {
-                        Text("Las recetas emitidas aparecerán acá")
-                    }
-                }
-            }
-            .sheet(isPresented: $showNewPrescription) {
-                NewPrescriptionView()
-            }
+            .sheet(isPresented: $showNew) { NewPrescriptionView() }
         }
     }
 }
 
-struct PrescriptionRow: View {
+struct PrescriptionCardPro: View {
     let prescription: LocalPrescription
     
-    var statusColor: Color {
-        switch prescription.status {
-        case "active": return .green
-        case "expired": return .red
-        case "cancelled": return .gray
-        default: return .gray
-        }
-    }
-    
-    var statusLabel: String {
-        switch prescription.status {
-        case "active": return "Vigente"
-        case "expired": return "Vencida"
-        case "cancelled": return "Cancelada"
-        default: return prescription.status
-        }
-    }
-    
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(prescription.items?.first?.medicationName ?? "Receta")
-                    .font(.body.weight(.medium))
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(LinearGradient.medi(MediStatus.gradient(for: prescription.status)))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "pills.fill")
+                        .font(.system(size: 17))
+                        .foregroundStyle(.white)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(prescription.items?.first?.medicationName ?? "Receta")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.mediText)
+                    Text(prescription.diagnosis)
+                        .font(.caption)
+                        .foregroundStyle(Color.mediTextSoft)
+                        .lineLimit(1)
+                }
+                
                 Spacer()
-                Text(statusLabel)
-                    .font(.caption2.weight(.medium))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(statusColor.opacity(0.12))
-                    .foregroundStyle(statusColor)
-                    .clipShape(Capsule())
+                
+                MediBadge(MediStatus.label(for: prescription.status),
+                          color: MediStatus.color(for: prescription.status))
             }
             
             if let item = prescription.items?.first {
-                Text("\(item.frequency) — \(item.duration ?? "")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.arrow.circlepath").font(.caption2)
+                    Text("\(item.frequency)\(item.duration.map { " · \($0)" } ?? "")")
+                        .font(.caption)
+                }
+                .foregroundStyle(Color.mediTextSoft)
             }
             
+            Divider().overlay(Color.mediPrimary.opacity(0.1))
+            
             HStack {
-                Text(prescription.patient?.fullName ?? "")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                HStack(spacing: 5) {
+                    Image(systemName: "person.fill").font(.caption2)
+                    Text(prescription.patient?.fullName ?? "")
+                        .font(.caption)
+                }
+                .foregroundStyle(Color.mediTextSoft)
                 Spacer()
-                Text(prescription.issuedAt.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                if let code = prescription.verificationCode {
+                    Text(code)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Color.mediPrimary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.mediPrimary.opacity(0.08))
+                        .clipShape(Capsule())
+                }
             }
         }
-        .padding(.vertical, 4)
+        .mediElevated(padding: 16)
     }
 }
 
@@ -100,53 +130,86 @@ struct PrescriptionDetailView: View {
     let prescription: LocalPrescription
     
     var body: some View {
-        List {
-            Section("Paciente") {
-                if let patient = prescription.patient {
-                    HStack {
-                        MediAvatar(name: patient.fullName, size: 40)
-                        Text(patient.fullName).font(.headline)
-                    }
-                }
-            }
-            
-            Section("Diagnóstico") {
-                Text(prescription.diagnosis)
-                if let code = prescription.diagnosisCode {
-                    LabeledContent("CIE-10", value: code)
-                }
-            }
-            
-            Section("Medicamentos") {
-                ForEach(prescription.items ?? [], id: \.id) { item in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.medicationName)
-                            .font(.body.weight(.medium))
-                        Text("\(item.dosage) · \(item.frequency)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        if let duration = item.duration {
-                            Text("Duración: \(duration)")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
+        ZStack {
+            MediBackground()
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    // Header
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(LinearGradient.medi(MediStatus.gradient(for: prescription.status)))
+                                .frame(width: 70, height: 70)
+                            Image(systemName: "cross.case.fill")
+                                .font(.system(size: 30))
+                                .foregroundStyle(.white)
                         }
-                        if let instructions = item.instructions {
-                            Text(instructions)
-                                .font(.caption)
-                                .foregroundStyle(Color.mediPrimary)
+                        .shadow(color: MediStatus.color(for: prescription.status).opacity(0.4), radius: 12, y: 5)
+                        
+                        Text(prescription.patient?.fullName ?? "Paciente")
+                            .font(.title3.bold())
+                            .foregroundStyle(Color.mediText)
+                        MediBadge(MediStatus.label(for: prescription.status),
+                                  color: MediStatus.color(for: prescription.status))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .mediElevated(padding: 20)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        MediSectionHeader(title: "Diagnóstico", icon: "stethoscope")
+                        Text(prescription.diagnosis)
+                            .font(.body)
+                            .foregroundStyle(Color.mediText)
+                        if let code = prescription.diagnosisCode {
+                            MediBadge("CIE-10: \(code)", color: .mediPrimary)
                         }
                     }
-                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .mediElevated()
+                    
+                    VStack(alignment: .leading, spacing: 14) {
+                        MediSectionHeader(title: "Medicamentos", icon: "pills.fill")
+                        ForEach(prescription.items ?? [], id: \.id) { item in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(item.medicationName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.mediText)
+                                HStack(spacing: 8) {
+                                    MediBadge(item.dosage, color: .mediCyan)
+                                    Text(item.frequency)
+                                        .font(.caption)
+                                        .foregroundStyle(Color.mediTextSoft)
+                                }
+                                if let duration = item.duration {
+                                    Text("Duración: \(duration)")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.mediTextMuted)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color.mediBgSoft.opacity(0.5))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                    }
+                    .mediElevated()
+                    
+                    VStack(spacing: 12) {
+                        MediSectionHeader(title: "Verificación", icon: "checkmark.seal.fill")
+                        if let code = prescription.verificationCode {
+                            Text(code)
+                                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                                .foregroundStyle(LinearGradient.medi([.mediPrimary, .mediDeep]))
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.mediBgSoft.opacity(0.6))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        MediInfoRow(icon: "calendar", label: "Emitida", value: prescription.issuedAt.formatted(date: .abbreviated, time: .omitted))
+                        MediInfoRow(icon: "calendar.badge.exclamationmark", label: "Vence", value: prescription.expiresAt.formatted(date: .abbreviated, time: .omitted))
+                    }
+                    .mediElevated()
                 }
-            }
-            
-            Section("Verificación") {
-                if let code = prescription.verificationCode {
-                    LabeledContent("Código", value: code)
-                        .font(.body.monospaced())
-                }
-                LabeledContent("Emitida", value: prescription.issuedAt.formatted(date: .long, time: .shortened))
-                LabeledContent("Vence", value: prescription.expiresAt.formatted(date: .long, time: .omitted))
+                .padding(20)
             }
         }
         .navigationTitle("Receta")
@@ -170,37 +233,74 @@ struct NewPrescriptionView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Paciente") {
-                    Picker("Seleccionar", selection: $selectedPatient) {
-                        Text("Elegir...").tag(nil as LocalPatient?)
-                        ForEach(patients) { p in
-                            Text(p.fullName).tag(p as LocalPatient?)
+            ZStack {
+                MediBackground()
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 18) {
+                        VStack(spacing: 14) {
+                            MediSectionHeader(title: "Paciente", icon: "person.fill")
+                            Menu {
+                                ForEach(patients) { p in
+                                    Button(p.fullName) { selectedPatient = p }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "person.circle.fill").foregroundStyle(Color.mediPrimary)
+                                    Text(selectedPatient?.fullName ?? "Seleccionar paciente")
+                                        .foregroundStyle(selectedPatient == nil ? Color.mediTextMuted : Color.mediText)
+                                    Spacer()
+                                    Image(systemName: "chevron.down").font(.caption).foregroundStyle(Color.mediPrimary)
+                                }
+                                .padding(16)
+                                .background(Color.white.opacity(0.7))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.mediPrimary.opacity(0.15), lineWidth: 1))
+                            }
                         }
+                        .mediElevated(padding: 18)
+                        
+                        VStack(spacing: 14) {
+                            MediSectionHeader(title: "Diagnóstico", icon: "stethoscope")
+                            MediTextField(icon: "text.alignleft", placeholder: "Diagnóstico", text: $diagnosis)
+                            MediTextField(icon: "number", placeholder: "Código CIE-10", text: $diagnosisCode)
+                        }
+                        .mediElevated(padding: 18)
+                        
+                        VStack(spacing: 14) {
+                            MediSectionHeader(title: "Medicamento", icon: "pills.fill")
+                            MediTextField(icon: "pills", placeholder: "Nombre del medicamento", text: $medicationName)
+                            MediTextField(icon: "scalemass", placeholder: "Dosis (ej: 10mg)", text: $dosage)
+                            MediTextField(icon: "clock", placeholder: "Frecuencia", text: $frequency)
+                            MediTextField(icon: "calendar", placeholder: "Duración (ej: 30 días)", text: $duration)
+                            
+                            HStack {
+                                Text("Validez: \(daysValid) días")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.mediText)
+                                Spacer()
+                                Stepper("", value: $daysValid, in: 1...365, step: 15)
+                                    .labelsHidden()
+                                    .tint(Color.mediPrimary)
+                            }
+                            .padding(.horizontal, 4)
+                        }
+                        .mediElevated(padding: 18)
+                        
+                        Button { save() } label: {
+                            Label("Emitir receta", systemImage: "doc.badge.plus")
+                        }
+                        .buttonStyle(MediButtonStyle())
+                        .disabled(selectedPatient == nil || diagnosis.isEmpty || medicationName.isEmpty)
+                        .opacity(selectedPatient == nil || diagnosis.isEmpty || medicationName.isEmpty ? 0.6 : 1)
                     }
-                }
-                Section("Diagnóstico") {
-                    TextField("Diagnóstico *", text: $diagnosis)
-                    TextField("Código CIE-10", text: $diagnosisCode)
-                }
-                Section("Medicamento") {
-                    TextField("Nombre *", text: $medicationName)
-                    TextField("Dosis (ej: 10mg) *", text: $dosage)
-                    TextField("Frecuencia (ej: 1 comp cada 12hs) *", text: $frequency)
-                    TextField("Duración (ej: 30 días)", text: $duration)
-                    Stepper("Validez: \(daysValid) días", value: $daysValid, in: 1...365)
-                }
-                Section {
-                    Button("Emitir receta") { save() }
-                        .frame(maxWidth: .infinity)
-                        .disabled(selectedPatient == nil || diagnosis.isEmpty || medicationName.isEmpty || dosage.isEmpty || frequency.isEmpty)
+                    .padding(20)
                 }
             }
             .navigationTitle("Nueva receta")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }
+                    Button("Cancelar") { dismiss() }.foregroundStyle(Color.mediPrimary)
                 }
             }
         }
@@ -211,6 +311,7 @@ struct NewPrescriptionView: View {
         let expiresAt = Calendar.current.date(byAdding: .day, value: daysValid, to: Date()) ?? Date()
         let rx = LocalPrescription(doctorId: UUID(), patient: patient, diagnosis: diagnosis, expiresAt: expiresAt)
         rx.diagnosisCode = diagnosisCode.isEmpty ? nil : diagnosisCode
+        rx.verificationCode = "MC-" + String(UUID().uuidString.prefix(8)).uppercased()
         
         let item = LocalPrescriptionItem(prescription: rx, medicationName: medicationName, dosage: dosage, frequency: frequency)
         item.duration = duration.isEmpty ? nil : duration
