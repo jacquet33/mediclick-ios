@@ -45,7 +45,7 @@ struct AgendaView: View {
                                 NavigationLink {
                                     AppointmentDetailView(appointment: appt)
                                 } label: {
-                                    AppointmentRow(appointment: appt)
+                                    AppointmentRowPro(appointment: appt)
                                 }
                                 .buttonStyle(.plain)
                             }
