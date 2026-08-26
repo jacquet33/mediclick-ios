@@ -6,16 +6,32 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: macos-14
+  validate:
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.0.app
-      
-      - name: Build
         run: |
-          # Create a temporary Xcode project and build
-          echo "iOS source ready for Xcode project"
-          ls -la MediClick/
+          XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using: $XCODE"
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Validate build (no signing)
+        run: |
+          xcodebuild clean build \
+            -project MediClick.xcodeproj \
+            -scheme MediClick \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" | tail -20
+          echo "✅ Build validated — full signing handled by Codemagic"
