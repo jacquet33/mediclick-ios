@@ -8,6 +8,7 @@ struct ProfileView: View {
     @State private var profileImage: Image?
     @State private var showOrgPicker = false
     @State private var showNotifications = false
+    @State private var showBookingSettings = false
     
     var body: some View {
         NavigationStack {
@@ -134,6 +135,9 @@ struct ProfileView: View {
                             SettingRow(icon: "bell.fill", title: "Notificaciones", color: .mediWarning) {
                                 showNotifications = true
                             }
+                            SettingRow(icon: "link", title: "Reservas online", color: .mediSuccess) {
+                                showBookingSettings = true
+                            }
                             SettingRow(icon: "clock.fill", title: "Mis horarios", color: .mediCyan) { }
                             SettingRow(icon: "creditcard.fill", title: "Honorarios", color: .mediSuccess) { }
                             SettingRow(icon: "lock.fill", title: "Seguridad", color: .mediPrimary) { }
@@ -160,6 +164,7 @@ struct ProfileView: View {
                 }
             }
             .sheet(isPresented: $showNotifications) { NotificationsView() }
+            .sheet(isPresented: $showBookingSettings) { BookingSettingsView() }
             .onChange(of: selectedPhoto) {
                 Task {
                     if let data = try? await selectedPhoto?.loadTransferable(type: Data.self),
