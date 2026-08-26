@@ -446,32 +446,11 @@ struct CreateOrganizationView: View {
                             
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                                 ForEach(orgTypes, id: \.0) { t in
+                                    let isSelected = type == t.0
                                     Button {
                                         withAnimation(.easeInOut(duration: 0.2)) { type = t.0 }
                                     } label: {
-                                        VStack(spacing: 8) {
-                                            ZStack {
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .fill(type == t.0
-                                                          ? LinearGradient.medi([.mediCyan, .mediSky])
-                                                          : LinearGradient.medi([Color.mediTextMuted.opacity(0.12), Color.mediTextMuted.opacity(0.06)]))
-                                                    .frame(width: 42, height: 42)
-                                                Image(systemName: t.2)
-                                                    .font(.system(size: 18))
-                                                    .foregroundStyle(type == t.0 ? .white : Color.mediTextSoft)
-                                            }
-                                            Text(t.1)
-                                                .font(.mediCaption(13))
-                                                .foregroundStyle(type == t.0 ? Color.mediPrimary : Color.mediTextSoft)
-                                        }
-                                        .padding(12)
-                                        .frame(maxWidth: .infinity)
-                                        .background(type == t.0 ? Color.mediCyan.opacity(0.06) : Color.clear)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(type == t.0 ? Color.mediCyan.opacity(0.4) : Color.clear, lineWidth: 1.5)
-                                        )
+                                        OrgTypeCell(label: t.1, icon: t.2, isSelected: isSelected)
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -483,14 +462,14 @@ struct CreateOrganizationView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             MediSectionHeader(title: "Datos", icon: "doc.text.fill")
                             
-                            MediTextField(label: "Nombre *", text: $name, icon: "building.2",
-                                          placeholder: "Ej: Consultorio Dr. García")
-                            MediTextField(label: "Teléfono", text: $phone, icon: "phone",
-                                          placeholder: "Ej: 0343-4123456")
-                            MediTextField(label: "Email", text: $email, icon: "envelope",
-                                          placeholder: "Ej: contacto@consultorio.com")
-                            MediTextField(label: "CUIT", text: $cuit, icon: "doc.text",
-                                          placeholder: "Ej: 20-12345678-9")
+                            MediTextField(label: "Nombre *", icon: "building.2",
+                                          placeholder: "Ej: Consultorio Dr. García", text: $name)
+                            MediTextField(label: "Teléfono", icon: "phone",
+                                          placeholder: "Ej: 0343-4123456", text: $phone)
+                            MediTextField(label: "Email", icon: "envelope",
+                                          placeholder: "Ej: contacto@consultorio.com", text: $email)
+                            MediTextField(label: "CUIT", icon: "doc.text",
+                                          placeholder: "Ej: 20-12345678-9", text: $cuit)
                         }
                         .mediElevated()
                         
@@ -498,10 +477,10 @@ struct CreateOrganizationView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             MediSectionHeader(title: "Ubicación", icon: "mappin.and.ellipse")
                             
-                            MediTextField(label: "Dirección", text: $address, icon: "mappin",
-                                          placeholder: "Ej: Av. San Martín 1234")
-                            MediTextField(label: "Ciudad", text: $city, icon: "building",
-                                          placeholder: "Ej: Colón")
+                            MediTextField(label: "Dirección", icon: "mappin",
+                                          placeholder: "Ej: Av. San Martín 1234", text: $address)
+                            MediTextField(label: "Ciudad", icon: "building",
+                                          placeholder: "Ej: Colón", text: $city)
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Provincia")
@@ -658,17 +637,17 @@ struct EditOrganizationView: View {
                     VStack(spacing: 18) {
                         VStack(alignment: .leading, spacing: 12) {
                             MediSectionHeader(title: "Datos", icon: "doc.text.fill")
-                            MediTextField(label: "Nombre", text: $name, icon: "building.2", placeholder: "")
-                            MediTextField(label: "Teléfono", text: $phone, icon: "phone", placeholder: "")
-                            MediTextField(label: "Email", text: $email, icon: "envelope", placeholder: "")
-                            MediTextField(label: "CUIT", text: $cuit, icon: "doc.text", placeholder: "")
+                            MediTextField(label: "Nombre", icon: "building.2", text: $name)
+                            MediTextField(label: "Teléfono", icon: "phone", text: $phone)
+                            MediTextField(label: "Email", icon: "envelope", text: $email)
+                            MediTextField(label: "CUIT", icon: "doc.text", text: $cuit)
                         }
                         .mediElevated()
                         
                         VStack(alignment: .leading, spacing: 12) {
                             MediSectionHeader(title: "Ubicación", icon: "mappin.and.ellipse")
-                            MediTextField(label: "Dirección", text: $address, icon: "mappin", placeholder: "")
-                            MediTextField(label: "Ciudad", text: $city, icon: "building", placeholder: "")
+                            MediTextField(label: "Dirección", icon: "mappin", text: $address)
+                            MediTextField(label: "Ciudad", icon: "building", text: $city)
                         }
                         .mediElevated()
                         
@@ -794,8 +773,8 @@ struct InviteDoctorView: View {
                         .padding(.vertical, 8)
                         
                         VStack(alignment: .leading, spacing: 12) {
-                            MediTextField(label: "Email del doctor *", text: $email,
-                                          icon: "envelope", placeholder: "doctor@ejemplo.com")
+                            MediTextField(label: "Email del doctor *", icon: "envelope",
+                                          placeholder: "doctor@ejemplo.com", text: $email)
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Rol")
@@ -1001,3 +980,38 @@ struct PendingInvitationsView: View {
 // MARK: - Themed TextField
 
 // MediTextField is defined in MediTheme.swift
+
+// MARK: - Org Type Selection Cell
+
+struct OrgTypeCell: View {
+    let label: String
+    let icon: String
+    let isSelected: Bool
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                let fill: LinearGradient = isSelected
+                    ? LinearGradient.medi([.mediCyan, .mediSky])
+                    : LinearGradient.medi([Color.mediTextMuted.opacity(0.12), Color.mediTextMuted.opacity(0.06)])
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(fill)
+                    .frame(width: 42, height: 42)
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundStyle(isSelected ? Color.white : Color.mediTextSoft)
+            }
+            Text(label)
+                .font(.mediCaption(13))
+                .foregroundStyle(isSelected ? Color.mediPrimary : Color.mediTextSoft)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(isSelected ? Color.mediCyan.opacity(0.06) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.mediCyan.opacity(0.4) : Color.clear, lineWidth: 1.5)
+        )
+    }
+}
