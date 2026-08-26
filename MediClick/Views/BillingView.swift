@@ -6,72 +6,69 @@ struct BillingView: View {
     @State private var store = BillingStore()
     @State private var showBuild = false
     @State private var showNomenclators = false
-    @State private var year = Calendar.current.component(.year, from: Date())
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                MediBackground()
+        ZStack {
+            MediBackground()
 
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 14) {
-                        if store.isLoading && store.batches.isEmpty {
-                            ProgressView().tint(Color.mediPrimary).padding(.top, 60)
-                        } else if store.batches.isEmpty {
-                            EmptyStateMedi(
-                                icon: "doc.text.magnifyingglass",
-                                title: "Sin lotes",
-                                subtitle: "Armá el lote del mes con los turnos atendidos",
-                                actionTitle: "Armar lote"
-                            ) { showBuild = true }
-                            .padding(.top, 50)
-                        } else {
-                            ForEach(store.batches) { batch in
-                                NavigationLink {
-                                    BatchDetailView(batchId: batch.id, store: store)
-                                } label: {
-                                    BatchCard(batch: batch)
-                                }
-                                .buttonStyle(.plain)
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 14) {
+                    if store.isLoading && store.batches.isEmpty {
+                        ProgressView().tint(Color.mediPrimary).padding(.top, 60)
+                    } else if store.batches.isEmpty {
+                        EmptyStateMedi(
+                            icon: "doc.text.magnifyingglass",
+                            title: "Sin lotes",
+                            subtitle: "Armá el lote del mes con los turnos atendidos",
+                            actionTitle: "Armar lote"
+                        ) { showBuild = true }
+                        .padding(.top, 50)
+                    } else {
+                        ForEach(store.batches) { batch in
+                            NavigationLink {
+                                BatchDetailView(batchId: batch.id, store: store)
+                            } label: {
+                                BatchCard(batch: batch)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
-                    .padding(20)
+                }
+                .padding(20)
+            }
+        }
+        .navigationTitle("Facturación")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showNomenclators = true } label: {
+                    Image(systemName: "list.bullet.rectangle")
+                        .foregroundStyle(Color.mediPrimary)
                 }
             }
-            .navigationTitle("Facturación")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showNomenclators = true } label: {
-                        Image(systemName: "list.bullet.rectangle")
-                            .foregroundStyle(Color.mediPrimary)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showBuild = true } label: {
+                    ZStack {
+                        Circle().fill(LinearGradient.mediHero).frame(width: 32, height: 32)
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showBuild = true } label: {
-                        ZStack {
-                            Circle().fill(LinearGradient.mediHero).frame(width: 34, height: 34)
-                            Image(systemName: "plus")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        .shadow(color: .mediCyan.opacity(0.4), radius: 8, y: 3)
-                    }
-                }
             }
-            .sheet(isPresented: $showBuild) {
-                BuildBatchView(store: store)
-            }
-            .sheet(isPresented: $showNomenclators) {
-                NomenclatorListView(store: store)
-            }
-            .task { await store.loadBatches() }
-            .refreshable { await store.loadBatches() }
-            .alert("Error", isPresented: .constant(store.errorMessage != nil)) {
-                Button("Cerrar") { store.errorMessage = nil }
-            } message: {
-                Text(store.errorMessage ?? "")
-            }
+        }
+        .sheet(isPresented: $showBuild) {
+            BuildBatchView(store: store)
+        }
+        .sheet(isPresented: $showNomenclators) {
+            NomenclatorListView(store: store)
+        }
+        .task { await store.loadBatches() }
+        .refreshable { await store.loadBatches() }
+        .alert("Error", isPresented: .constant(store.errorMessage != nil)) {
+            Button("Cerrar") { store.errorMessage = nil }
+        } message: {
+            Text(store.errorMessage ?? "")
         }
     }
 }

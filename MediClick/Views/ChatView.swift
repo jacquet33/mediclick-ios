@@ -8,10 +8,9 @@ struct ChatListView: View {
     @State private var showNewChat = false
     
     var body: some View {
-        NavigationStack {
             ZStack {
                 MediBackground()
-                
+
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 12) {
                         if conversations.isEmpty {
@@ -51,7 +50,6 @@ struct ChatListView: View {
             .sheet(isPresented: $showNewChat) {
                 NewChatView()
             }
-        }
     }
 }
 
