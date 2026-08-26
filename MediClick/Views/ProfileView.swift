@@ -9,6 +9,9 @@ struct ProfileView: View {
     @State private var showOrgPicker = false
     @State private var showNotifications = false
     @State private var showBookingSettings = false
+    @State private var showCreateOrg = false
+    @State private var showOrgDetail: AuthManager.OrgInfo?
+    @State private var showInvitations = false
     
     var body: some View {
         NavigationStack {
@@ -74,6 +77,7 @@ struct ProfileView: View {
                             ForEach(auth.organizations) { org in
                                 Button {
                                     auth.selectOrganization(org)
+                                    showOrgDetail = org
                                 } label: {
                                     HStack(spacing: 12) {
                                         ZStack {
@@ -113,9 +117,7 @@ struct ProfileView: View {
                                 .buttonStyle(.plain)
                             }
                             
-                            Button {
-                                // Add new org
-                            } label: {
+                            Button { showCreateOrg = true } label: {
                                 HStack {
                                     Image(systemName: "plus.circle.fill")
                                     Text("Agregar consultorio")
@@ -123,6 +125,17 @@ struct ProfileView: View {
                                 }
                                 .font(.mediCaption(15))
                                 .foregroundStyle(Color.mediPrimary)
+                                .padding(12)
+                            }
+                            
+                            Button { showInvitations = true } label: {
+                                HStack {
+                                    Image(systemName: "envelope.badge")
+                                    Text("Invitaciones pendientes")
+                                    Spacer()
+                                }
+                                .font(.mediCaption(15))
+                                .foregroundStyle(Color.mediSky)
                                 .padding(12)
                             }
                         }
@@ -165,6 +178,21 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showNotifications) { NotificationsView() }
             .sheet(isPresented: $showBookingSettings) { BookingSettingsView() }
+            .sheet(isPresented: $showCreateOrg) {
+                CreateOrganizationView()
+                    .environment(auth)
+            }
+            .sheet(item: $showOrgDetail) { org in
+                OrganizationDetailView(org: org)
+                    .environment(auth)
+            }
+            .sheet(isPresented: $showInvitations) {
+                PendingInvitationsView {
+                    // Recargar orgs del doctor al aceptar invitación
+                    Task { await reloadOrganizations() }
+                }
+                .environment(auth)
+            }
             .onChange(of: selectedPhoto) {
                 Task {
                     if let data = try? await selectedPhoto?.loadTransferable(type: Data.self),
@@ -180,6 +208,36 @@ struct ProfileView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Reload orgs from API
+    
+    func reloadOrganizations() async {
+        struct OrgRow: Decodable {
+            let orgId: String
+            let orgDoctorId: String
+            let orgName: String
+            let orgType: String
+            let role: String
+        }
+        
+        do {
+            let rows: [OrgRow] = try await APIClient.shared.get("/api/v1/organizations")
+            let newOrgs = rows.map { r in
+                AuthManager.OrgInfo(id: r.orgId, orgDoctorId: r.orgDoctorId,
+                                    name: r.orgName, type: r.orgType, role: r.role)
+            }
+            await MainActor.run {
+                auth.organizations = newOrgs
+                // Mantener la selección activa si sigue existiendo
+                if let activeId = auth.activeOrganization?.id,
+                   let match = newOrgs.first(where: { $0.id == activeId }) {
+                    auth.selectOrganization(match)
+                } else if let first = newOrgs.first {
+                    auth.selectOrganization(first)
+                }
+            }
+        } catch { /* silencioso si falla */ }
     }
     
     func orgIcon(_ type: String) -> String {
