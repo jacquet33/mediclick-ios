@@ -111,8 +111,10 @@ struct MediElevatedCard: ViewModifier {
                 RoundedRectangle(cornerRadius: radius)
                     .stroke(LinearGradient.mediBorder, lineWidth: 1)
             )
-            .shadow(color: .mediPrimary.opacity(0.10), radius: 20, x: 0, y: 8)
-            .shadow(color: .mediDeep.opacity(0.04), radius: 2, x: 0, y: 1)
+            // Airbnb-style: crisp 1px edge + soft ambient shadow
+            .shadow(color: Color.black.opacity(0.04), radius: 0.5, y: 0.5)
+            .shadow(color: .mediPrimary.opacity(0.08), radius: 16, x: 0, y: 6)
+            .shadow(color: .mediDeep.opacity(0.03), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -246,10 +248,11 @@ struct MediBadge: View {
                 Capsule()
                     .fill(bgColor)
                     .overlay(
-                        Capsule().stroke(color.opacity(0.25), lineWidth: 0.5)
+                        Capsule().stroke(color.opacity(0.2), lineWidth: 0.5)
                     )
             )
             .foregroundStyle(color)
+            .shadow(color: color.opacity(0.15), radius: 3, y: 1)
     }
 }
 
@@ -277,12 +280,14 @@ struct MediButtonStyle: ButtonStyle {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSecondary ? Color.mediPrimary.opacity(0.2) : .white.opacity(0.3), lineWidth: 1)
+                    .stroke(isSecondary ? Color.mediPrimary.opacity(0.15) : .white.opacity(0.25), lineWidth: 1)
             )
-            .shadow(color: isSecondary ? .clear : (colors.first?.opacity(0.4) ?? .clear),
-                    radius: configuration.isPressed ? 6 : 14,
-                    y: configuration.isPressed ? 2 : 6)
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            // Airbnb-style: micro outer glow + deeper soft shadow
+            .shadow(color: Color.black.opacity(0.06), radius: 1, y: 1)
+            .shadow(color: isSecondary ? Color.mediPrimary.opacity(0.12) : (colors.first?.opacity(0.35) ?? .clear),
+                    radius: configuration.isPressed ? 4 : 12,
+                    y: configuration.isPressed ? 1 : 5)
+            .scaleEffect(configuration.isPressed ? 0.975 : 1)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }

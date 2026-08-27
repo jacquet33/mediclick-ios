@@ -206,11 +206,13 @@ struct MoreRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 9)
+                RoundedRectangle(cornerRadius: 10)
                     .fill(LinearGradient.medi([color.opacity(0.18), color.opacity(0.07)]))
-                    .frame(width: 38, height: 38)
+                    .frame(width: 40, height: 40)
+                    .shadow(color: color.opacity(0.2), radius: 4, y: 2)
+                    .shadow(color: Color.black.opacity(0.04), radius: 1, y: 0.5)
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(color)
             }
 
@@ -226,9 +228,9 @@ struct MoreRow: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.caption)
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.mediTextMuted)
         }
-        .padding(.vertical, 9)
+        .padding(.vertical, 10)
     }
 }

@@ -288,11 +288,13 @@ struct SettingRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 10)
                         .fill(color.opacity(0.12))
-                        .frame(width: 34, height: 34)
+                        .frame(width: 36, height: 36)
+                        .shadow(color: color.opacity(0.18), radius: 4, y: 2)
+                        .shadow(color: Color.black.opacity(0.04), radius: 1, y: 0.5)
                     Image(systemName: icon)
-                        .font(.system(size: 15))
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(color)
                 }
                 Text(title)
@@ -300,11 +302,16 @@ struct SettingRow: View {
                     .foregroundStyle(Color.mediText)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.caption)
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.mediTextMuted)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 4)
+            .padding(.vertical, 9)
+            .padding(.horizontal, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.clear)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
     }
