@@ -279,7 +279,7 @@ struct PrescriptionDetailView: View {
         isLoadingPdf = true
         pdfError = nil
         do {
-            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(prescription.remoteId ?? prescription.id.uuidString)/pdf")
+            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(prescription.remoteId?.uuidString ?? prescription.id.uuidString)/pdf")
             let url = savePdfToTemp(data)
             await MainActor.run {
                 pdfURL = url
@@ -298,7 +298,7 @@ struct PrescriptionDetailView: View {
         isLoadingPdf = true
         pdfError = nil
         do {
-            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(prescription.remoteId ?? prescription.id.uuidString)/pdf")
+            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(prescription.remoteId?.uuidString ?? prescription.id.uuidString)/pdf")
             let url = savePdfToTemp(data)
             await MainActor.run {
                 pdfURL = url
@@ -314,7 +314,7 @@ struct PrescriptionDetailView: View {
     }
     
     private func savePdfToTemp(_ data: Data) -> URL? {
-        let patientName = prescription.patient?.fullName?.replacingOccurrences(of: " ", with: "_") ?? "receta"
+        let patientName = prescription.patient?.fullName.replacingOccurrences(of: " ", with: "_") ?? "receta"
         let fileName = "Receta_\(patientName)_\(Date.now.formatted(.dateTime.day().month().year())).pdf"
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
         do {
@@ -326,17 +326,7 @@ struct PrescriptionDetailView: View {
     }
 }
 
-// MARK: - Share Sheet (UIKit bridge)
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
+// ShareSheet is defined in BatchDetailView.swift
 
 struct NewPrescriptionView: View {
     @Environment(\.dismiss) private var dismiss
