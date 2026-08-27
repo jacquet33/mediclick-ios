@@ -286,9 +286,14 @@ struct PrescriptionDetailView: View {
                 isLoadingPdf = false
                 if let url { UIApplication.shared.open(url) }
             }
+        } catch let APIError.server(status, message) {
+            await MainActor.run {
+                pdfError = "Error \(status): \(message ?? "desconocido")"
+                isLoadingPdf = false
+            }
         } catch {
             await MainActor.run {
-                pdfError = "No se pudo generar el PDF"
+                pdfError = error.localizedDescription
                 isLoadingPdf = false
             }
         }
@@ -305,9 +310,14 @@ struct PrescriptionDetailView: View {
                 isLoadingPdf = false
                 if url != nil { showShareSheet = true }
             }
+        } catch let APIError.server(status, message) {
+            await MainActor.run {
+                pdfError = "Error \(status): \(message ?? "desconocido")"
+                isLoadingPdf = false
+            }
         } catch {
             await MainActor.run {
-                pdfError = "No se pudo generar el PDF"
+                pdfError = error.localizedDescription
                 isLoadingPdf = false
             }
         }
