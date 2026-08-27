@@ -95,6 +95,30 @@ struct MoreView: View {
                             .buttonStyle(.plain)
 
                             NavigationLink {
+                                WaitlistView()
+                            } label: {
+                                MoreRow(icon: "bell.badge.fill", title: "Lista de espera",
+                                        subtitle: "Pacientes esperando turno", color: .mediCyan)
+                            }
+                            .buttonStyle(.plain)
+
+                            NavigationLink {
+                                WaitingRoomView()
+                            } label: {
+                                MoreRow(icon: "chair.lounge.fill", title: "Sala de espera",
+                                        subtitle: "Cola de atención en vivo", color: .mediSuccess)
+                            }
+                            .buttonStyle(.plain)
+
+                            NavigationLink {
+                                RolesManagementView()
+                            } label: {
+                                MoreRow(icon: "person.3.fill", title: "Equipo y roles",
+                                        subtitle: "Gestionar miembros", color: .mediDeep)
+                            }
+                            .buttonStyle(.plain)
+
+                            NavigationLink {
                                 BillingView()
                             } label: {
                                 MoreRow(icon: "banknote.fill", title: "Facturación",
