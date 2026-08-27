@@ -128,6 +128,10 @@ struct PrescriptionCardPro: View {
 
 struct PrescriptionDetailView: View {
     let prescription: LocalPrescription
+    @State private var isLoadingPdf = false
+    @State private var pdfURL: URL?
+    @State private var showShareSheet = false
+    @State private var pdfError: String?
     
     var body: some View {
         ZStack {
@@ -153,6 +157,54 @@ struct PrescriptionDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .mediElevated(padding: 20)
+                    
+                    // Botones de acción: PDF + Compartir código
+                    HStack(spacing: 12) {
+                        Button {
+                            Task { await downloadPdf() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isLoadingPdf {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Image(systemName: "doc.text.fill")
+                                }
+                                Text("Ver PDF")
+                            }
+                            .font(.mediCaption(14))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(LinearGradient.medi([.mediCyan, .mediSky]))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .shadow(color: .mediCyan.opacity(0.3), radius: 8, y: 3)
+                        }
+                        .disabled(isLoadingPdf)
+                        
+                        Button {
+                            Task { await downloadAndShare() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "square.and.arrow.up")
+                                Text("Compartir")
+                            }
+                            .font(.mediCaption(14))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(LinearGradient.medi([.mediPrimary, .mediDeep]))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .shadow(color: .mediPrimary.opacity(0.3), radius: 8, y: 3)
+                        }
+                    }
+                    .mediElevated(padding: 14)
+                    
+                    if let pdfError {
+                        Text(pdfError)
+                            .font(.caption)
+                            .foregroundStyle(Color.mediDanger)
+                            .frame(maxWidth: .infinity)
+                    }
                     
                     VStack(alignment: .leading, spacing: 12) {
                         MediSectionHeader(title: "Diagnóstico", icon: "stethoscope")
@@ -214,7 +266,76 @@ struct PrescriptionDetailView: View {
         }
         .navigationTitle("Receta")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showShareSheet) {
+            if let pdfURL {
+                ShareSheet(items: [pdfURL])
+            }
+        }
     }
+    
+    // MARK: - PDF Actions
+    
+    private func downloadPdf() async {
+        isLoadingPdf = true
+        pdfError = nil
+        do {
+            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(prescription.remoteId ?? prescription.id.uuidString)/pdf")
+            let url = savePdfToTemp(data)
+            await MainActor.run {
+                pdfURL = url
+                isLoadingPdf = false
+                if let url { UIApplication.shared.open(url) }
+            }
+        } catch {
+            await MainActor.run {
+                pdfError = "No se pudo generar el PDF"
+                isLoadingPdf = false
+            }
+        }
+    }
+    
+    private func downloadAndShare() async {
+        isLoadingPdf = true
+        pdfError = nil
+        do {
+            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(prescription.remoteId ?? prescription.id.uuidString)/pdf")
+            let url = savePdfToTemp(data)
+            await MainActor.run {
+                pdfURL = url
+                isLoadingPdf = false
+                if url != nil { showShareSheet = true }
+            }
+        } catch {
+            await MainActor.run {
+                pdfError = "No se pudo generar el PDF"
+                isLoadingPdf = false
+            }
+        }
+    }
+    
+    private func savePdfToTemp(_ data: Data) -> URL? {
+        let patientName = prescription.patient?.fullName?.replacingOccurrences(of: " ", with: "_") ?? "receta"
+        let fileName = "Receta_\(patientName)_\(Date.now.formatted(.dateTime.day().month().year())).pdf"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        do {
+            try data.write(to: url)
+            return url
+        } catch {
+            return nil
+        }
+    }
+}
+
+// MARK: - Share Sheet (UIKit bridge)
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct NewPrescriptionView: View {
