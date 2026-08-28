@@ -321,8 +321,8 @@ struct MemberDetailSheet: View {
                                                 .frame(width: 36, height: 36)
                                                 .background(
                                                     isSelected
-                                                    ? AnyShapeStyle(LinearGradient.medi([.mediCyan, .mediPrimary]))
-                                                    : AnyShapeStyle(Color.mediBgSoft)
+                                                    ? Color.mediTeal
+                                                    : Color.mediBgSoft
                                                 )
                                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                                             

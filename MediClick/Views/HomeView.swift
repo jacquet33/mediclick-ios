@@ -61,17 +61,17 @@ struct HomeView: View {
                             // Org selector
                             if let org = auth.activeOrganization {
                                 Button { showOrgPicker = true } label: {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "building.2.fill").font(.caption)
-                                        Text(org.name).font(.caption.weight(.semibold)).lineLimit(1)
-                                        if auth.organizations.count > 1 {
-                                            Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
-                                        }
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "building.2.fill")
+                                            .font(.system(size: 11))
+                                        Text(org.name)
+                                            .font(.system(size: 12, weight: .medium))
+                                            .lineLimit(1)
                                     }
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 7)
-                                    .background(.white.opacity(0.18))
+                                    .foregroundStyle(Color.mediTextSoft)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.mediBgSoft)
                                     .clipShape(Capsule())
                                     .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 1))
                                 }
@@ -224,18 +224,25 @@ struct StatCardPro: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.25)).frame(width: 38, height: 38)
-                Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill((colors.first ?? .mediTeal).opacity(0.1))
+                    .frame(width: 32, height: 32)
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(colors.first ?? .mediTeal)
             }
             Text(value)
-                .font(.mediNumber(30))
-                .foregroundStyle(.white)
+                .font(.system(size: 24, weight: .medium))
+                .foregroundStyle(Color.mediText)
             Text(title)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.white.opacity(0.85))
+                .font(.system(size: 11))
+                .foregroundStyle(Color.mediTextMuted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .mediGradientCard(colors, padding: 16)
+        .padding(14)
+        .background(Color.mediSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.mediBorder, lineWidth: 0.5))
     }
 }
 

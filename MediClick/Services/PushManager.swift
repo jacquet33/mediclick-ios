@@ -46,12 +46,14 @@ final class PushManager: NSObject {
     }
     
     /// Subir token al backend
+    @MainActor
     private func uploadToken(_ token: String) async {
         guard let userId = UserDefaults.standard.string(forKey: "doctor_id")
                 ?? UserDefaults.standard.string(forKey: "user_id") else { return }
         
         let userType = UserDefaults.standard.string(forKey: "user_type") ?? "doctor"
-        let device = UIDevice.current
+        let deviceName = UIDevice.current.name
+        let osVersion = UIDevice.current.systemVersion
         
         struct RegisterBody: Encodable {
             let userType: String
@@ -68,9 +70,9 @@ final class PushManager: NSObject {
             userId: userId,
             token: token,
             platform: "ios",
-            deviceName: device.name,
+            deviceName: deviceName,
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            osVersion: device.systemVersion
+            osVersion: osVersion
         )
         
         do {
@@ -84,7 +86,7 @@ final class PushManager: NSObject {
     
     /// Desregistrar al hacer logout
     func unregister() async {
-        guard let token = deviceToken else { return }
+        guard deviceToken != nil else { return }
         
         struct UnregBody: Encodable { let token: String }
         do {

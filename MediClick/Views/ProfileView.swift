@@ -756,8 +756,8 @@ struct ReminderMinutesPicker: View {
                         .padding(.vertical, 7)
                         .background(
                             isActive
-                                ? AnyShapeStyle(LinearGradient.medi([.mediCyan, .mediSky]))
-                                : AnyShapeStyle(Color.mediBgSoft)
+                                ? Color.mediTeal
+                                : Color.mediBgSoft
                         )
                         .clipShape(Capsule())
                         .overlay(
@@ -799,8 +799,8 @@ struct DaysPicker: View {
                         .frame(width: 36, height: 36)
                         .background(
                             isActive
-                                ? AnyShapeStyle(LinearGradient.medi([.mediCyan, .mediSky]))
-                                : AnyShapeStyle(Color.mediBgSoft)
+                                ? Color.mediTeal
+                                : Color.mediBgSoft
                         )
                         .clipShape(Circle())
                         .overlay(
@@ -864,8 +864,8 @@ struct ChannelToggle: View {
             .padding(.vertical, 7)
             .background(
                 isOn
-                    ? AnyShapeStyle(LinearGradient.medi([.mediCyan, .mediSky]))
-                    : AnyShapeStyle(Color.mediBgSoft)
+                    ? Color.mediTeal
+                    : Color.mediBgSoft
             )
             .clipShape(Capsule())
             .overlay(

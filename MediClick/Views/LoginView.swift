@@ -16,20 +16,27 @@ struct LoginView: View {
                 VStack(spacing: 26) {
                     Spacer().frame(height: 50)
                     
-                    // Animated logo
+                    // Logo
                     VStack(spacing: 10) {
-                        MediAnimatedLogo(size: 96)
+                        ZStack {
+                            Circle()
+                                .fill(Color.mediTeal)
+                                .frame(width: 80, height: 80)
+                            Image(systemName: "cross.case.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(.white)
+                        }
                             .scaleEffect(animateLogo ? 1 : 0.85)
                             .opacity(animateLogo ? 1 : 0)
-                            .animation(.spring(response: 0.7, dampingFraction: 0.65), value: animateLogo)
+                            .animation(.easeOut(duration: 0.5), value: animateLogo)
                         
-                        Text("MediClick")
-                            .font(.mediTitle(34))
-                            .foregroundStyle(LinearGradient.medi([.mediPrimary, .mediDeep]))
+                        Text("mediclick")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundStyle(Color.mediText)
                         
                         Text("Gestión médica integral")
-                            .font(.mediCaption(15))
-                            .foregroundStyle(Color.mediTextSoft)
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.mediTextMuted)
                     }
                     .onAppear { animateLogo = true }
                     

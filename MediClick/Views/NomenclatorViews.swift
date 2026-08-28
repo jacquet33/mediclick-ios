@@ -412,7 +412,7 @@ struct ImportSheetView: View {
 
             if !r.warnings.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    MediSectionHeader(title: "Atención", icon: "exclamationmark.triangle.fill", color: .mediWarning)
+                    MediSectionHeader(title: "Atención", icon: "exclamationmark.triangle.fill")
                     ForEach(r.warnings, id: \.self) { w in
                         Text(w)
                             .font(.caption)

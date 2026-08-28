@@ -258,8 +258,8 @@ struct FilterChip: View {
                 .padding(.vertical, 8)
                 .background(
                     isActive
-                    ? AnyShapeStyle(LinearGradient.medi([.mediCyan, .mediSky]))
-                    : AnyShapeStyle(Color.mediSurface)
+                    ? Color.mediTeal
+                    : Color.mediSurface
                 )
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(isActive ? Color.clear : Color.mediCyan.opacity(0.2), lineWidth: 1))

@@ -356,7 +356,7 @@ struct BuildBatchView: View {
 
             if !r.skipped.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    MediSectionHeader(title: "No se incluyeron", icon: "minus.circle", color: .mediWarning)
+                    MediSectionHeader(title: "No se incluyeron", icon: "minus.circle")
                     ForEach(r.skipped.prefix(5), id: \.self) { s in
                         Text("• \(s)")
                             .font(.caption)

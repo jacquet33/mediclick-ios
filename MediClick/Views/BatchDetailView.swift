@@ -141,8 +141,7 @@ struct BatchDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
             MediSectionHeader(
                 title: a.canSubmit ? "Listo para presentar" : "Hay que corregir",
-                icon: a.canSubmit ? "checkmark.seal.fill" : "exclamationmark.triangle.fill",
-                color: a.canSubmit ? .mediSuccess : .mediDanger
+                icon: a.canSubmit ? "checkmark.seal.fill" : "exclamationmark.triangle.fill"
             )
 
             if !a.findings.isEmpty {
@@ -189,14 +188,10 @@ struct BatchDetailView: View {
                         .foregroundStyle(filter == f ? .white : colorFor(f))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 9)
-                        .background(
-                            filter == f
-                            ? AnyShapeStyle(LinearGradient.medi([colorFor(f), colorFor(f).opacity(0.75)]))
-                            : AnyShapeStyle(Color.white.opacity(0.75))
-                        )
+                        .background(filter == f ? colorFor(f) : Color.mediBgSoft)
                         .clipShape(Capsule())
                         .overlay(
-                            Capsule().stroke(colorFor(f).opacity(filter == f ? 0.3 : 0.2), lineWidth: 1)
+                            Capsule().stroke(colorFor(f).opacity(0.15), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(.plain)

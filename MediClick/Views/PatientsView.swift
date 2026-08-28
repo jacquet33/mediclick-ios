@@ -168,27 +168,6 @@ struct PatientDetailView: View {
     }
 }
 
-struct MediInfoRow: View {
-    let icon: String
-    let label: String
-    let value: String
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(Color.mediPrimary)
-                .frame(width: 20)
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(Color.mediTextSoft)
-            Spacer()
-            Text(value)
-                .font(.mediCaption(15))
-                .foregroundStyle(Color.mediText)
-        }
-    }
-}
 
 struct NewPatientView: View {
     @Environment(\.dismiss) private var dismiss

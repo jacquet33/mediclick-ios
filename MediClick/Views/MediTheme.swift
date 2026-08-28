@@ -369,13 +369,4 @@ extension LinearGradient {
     }
 }
 
-// MARK: - AnyShapeStyle compat
-
-extension AnyShapeStyle {
-    init(_ color: Color) {
-        self.init(color as any ShapeStyle)
-    }
-    init(_ gradient: LinearGradient) {
-        self.init(gradient as any ShapeStyle)
-    }
-}
+// MARK: - AnyShapeStyle compat (removed - use concrete types instead)
