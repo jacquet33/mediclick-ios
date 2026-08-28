@@ -139,7 +139,7 @@ struct HomeView: View {
                                 EmptyStateMedi(icon: "calendar.badge.checkmark",
                                                title: "Sin turnos hoy",
                                                subtitle: "Tu agenda de hoy está libre")
-                                .mediGlass()
+                                .mediCard()
                             } else {
                                 ForEach(todayAppointments.prefix(5)) { appt in
                                     AppointmentRowPro(appointment: appt)
