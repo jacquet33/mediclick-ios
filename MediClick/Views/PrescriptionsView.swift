@@ -200,10 +200,29 @@ struct PrescriptionDetailView: View {
                     .mediElevated(padding: 14)
                     
                     if let pdfError {
-                        Text(pdfError)
-                            .font(.caption)
-                            .foregroundStyle(Color.mediDanger)
-                            .frame(maxWidth: .infinity)
+                        if prescriptionServerId == nil {
+                            // Receta local sin sincronizar — ofrecer sincronizar
+                            Button {
+                                Task { await retrySyncAndGeneratePdf() }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                    Text("Sincronizar receta")
+                                }
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.mediTeal)
+                                .frame(maxWidth: .infinity)
+                                .padding(12)
+                                .background(Color.mediTealSoft)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediTeal.opacity(0.2), lineWidth: 0.5))
+                            }
+                        } else {
+                            Text(pdfError)
+                                .font(.caption)
+                                .foregroundStyle(Color.mediDanger)
+                                .frame(maxWidth: .infinity)
+                        }
                     }
                     
                     VStack(alignment: .leading, spacing: 12) {
@@ -334,6 +353,73 @@ struct PrescriptionDetailView: View {
             return url
         } catch {
             return nil
+        }
+    }
+    
+    private func retrySyncAndGeneratePdf() async {
+        isLoadingPdf = true
+        pdfError = nil
+        
+        struct CreateRxRequest: Encodable {
+            let patientId: String
+            let diagnosis: String
+            let diagnosisCode: String?
+            let notes: String?
+            let items: [CreateRxItem]
+        }
+        struct CreateRxItem: Encodable {
+            let medicationName: String
+            let dosage: String?
+            let frequency: String?
+            let duration: String?
+            let quantity: Int?
+        }
+        struct CreateRxResponse: Decodable {
+            let id: String
+            let verificationCode: String?
+            enum CodingKeys: String, CodingKey {
+                case id
+                case verificationCode = "verification_code"
+            }
+        }
+        
+        let patientId = prescription.patient?.remoteId?.uuidString ?? prescription.patient?.id.uuidString ?? ""
+        
+        let request = CreateRxRequest(
+            patientId: patientId,
+            diagnosis: prescription.diagnosis,
+            diagnosisCode: prescription.diagnosisCode,
+            notes: nil,
+            items: (prescription.items ?? []).map { item in
+                CreateRxItem(
+                    medicationName: item.medicationName,
+                    dosage: item.dosage,
+                    frequency: item.frequency,
+                    duration: item.duration,
+                    quantity: nil
+                )
+            }
+        )
+        
+        do {
+            let response: CreateRxResponse = try await APIClient.shared.post("/api/v1/prescriptions", body: request)
+            
+            await MainActor.run {
+                prescription.remoteId = UUID(uuidString: response.id)
+                if let code = response.verificationCode {
+                    prescription.verificationCode = code
+                }
+                try? prescription.modelContext?.save()
+                pdfError = nil
+            }
+            
+            // Ahora descargar el PDF
+            await downloadPdf()
+        } catch {
+            await MainActor.run {
+                pdfError = "Error al sincronizar: \(error.localizedDescription)"
+                isLoadingPdf = false
+            }
         }
     }
 }
