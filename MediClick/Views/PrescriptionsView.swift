@@ -360,64 +360,83 @@ struct PrescriptionDetailView: View {
         isLoadingPdf = true
         pdfError = nil
         
+        struct CreatePatientReq: Encodable {
+            let firstName: String; let lastName: String
+            let phone: String?; let email: String?; let dni: String?
+        }
+        struct CreatePatientResp: Decodable { let id: String }
         struct CreateRxRequest: Encodable {
-            let patientId: String
-            let diagnosis: String
-            let diagnosisCode: String?
-            let notes: String?
+            let patientId: String; let diagnosis: String
+            let diagnosisCode: String?; let notes: String?
             let items: [CreateRxItem]
         }
         struct CreateRxItem: Encodable {
-            let medicationName: String
-            let dosage: String?
-            let frequency: String?
-            let duration: String?
-            let quantity: Int?
+            let medicationName: String; let dosage: String?
+            let frequency: String?; let duration: String?; let quantity: Int?
         }
         struct CreateRxResponse: Decodable {
-            let id: String
-            let verificationCode: String?
-            enum CodingKeys: String, CodingKey {
-                case id
-                case verificationCode = "verification_code"
-            }
+            let id: String; let verificationCode: String?
+            enum CodingKeys: String, CodingKey { case id; case verificationCode = "verification_code" }
         }
         
-        let patientId = prescription.patient?.remoteId?.uuidString ?? prescription.patient?.id.uuidString ?? ""
-        
-        let request = CreateRxRequest(
-            patientId: patientId,
-            diagnosis: prescription.diagnosis,
-            diagnosisCode: prescription.diagnosisCode,
-            notes: nil,
-            items: (prescription.items ?? []).map { item in
-                CreateRxItem(
-                    medicationName: item.medicationName,
-                    dosage: item.dosage,
-                    frequency: item.frequency,
-                    duration: item.duration,
-                    quantity: nil
-                )
-            }
-        )
+        guard let patient = prescription.patient else {
+            await MainActor.run { pdfError = "Sin paciente asociado"; isLoadingPdf = false }
+            return
+        }
         
         do {
+            // 1. Sincronizar paciente si no tiene remoteId
+            var patientServerId = patient.remoteId?.uuidString
+            if patientServerId == nil {
+                let pReq = CreatePatientReq(
+                    firstName: patient.firstName, lastName: patient.lastName,
+                    phone: patient.phone, email: patient.email, dni: patient.dni
+                )
+                let pResp: CreatePatientResp = try await APIClient.shared.post("/api/v1/patients", body: pReq)
+                await MainActor.run {
+                    patient.remoteId = UUID(uuidString: pResp.id)
+                    patient.syncStatus = .synced
+                    try? patient.modelContext?.save()
+                }
+                patientServerId = pResp.id
+            }
+            
+            guard let pid = patientServerId else {
+                await MainActor.run { pdfError = "No se pudo sincronizar el paciente"; isLoadingPdf = false }
+                return
+            }
+            
+            // 2. Sincronizar receta
+            let request = CreateRxRequest(
+                patientId: pid,
+                diagnosis: prescription.diagnosis,
+                diagnosisCode: prescription.diagnosisCode,
+                notes: nil,
+                items: (prescription.items ?? []).map { item in
+                    CreateRxItem(
+                        medicationName: item.medicationName,
+                        dosage: item.dosage,
+                        frequency: item.frequency,
+                        duration: item.duration,
+                        quantity: nil
+                    )
+                }
+            )
+            
             let response: CreateRxResponse = try await APIClient.shared.post("/api/v1/prescriptions", body: request)
             
             await MainActor.run {
                 prescription.remoteId = UUID(uuidString: response.id)
-                if let code = response.verificationCode {
-                    prescription.verificationCode = code
-                }
+                if let code = response.verificationCode { prescription.verificationCode = code }
+                prescription.syncStatus = .synced
                 try? prescription.modelContext?.save()
-                pdfError = nil
             }
             
-            // Ahora descargar el PDF
+            // 3. Descargar PDF
             await downloadPdf()
         } catch {
             await MainActor.run {
-                pdfError = "Error al sincronizar: \(error.localizedDescription)"
+                pdfError = "Error: \(error.localizedDescription)"
                 isLoadingPdf = false
             }
         }
