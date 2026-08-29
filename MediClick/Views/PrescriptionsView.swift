@@ -442,6 +442,71 @@ struct NewPrescriptionView: View {
         modelContext.insert(rx)
         modelContext.insert(item)
         try? modelContext.save()
+        
+        // Sincronizar al backend
+        Task {
+            await syncPrescriptionToServer(rx, items: [item], patient: patient)
+        }
+        
         dismiss()
+    }
+    
+    private func syncPrescriptionToServer(_ rx: LocalPrescription, items: [LocalPrescriptionItem], patient: LocalPatient) async {
+        struct CreateRxRequest: Encodable {
+            let patientId: String
+            let diagnosis: String
+            let diagnosisCode: String?
+            let notes: String?
+            let items: [CreateRxItem]
+        }
+        struct CreateRxItem: Encodable {
+            let medicationName: String
+            let dosage: String?
+            let frequency: String?
+            let duration: String?
+            let quantity: Int?
+        }
+        struct CreateRxResponse: Decodable {
+            let id: String
+            let verificationCode: String?
+            
+            enum CodingKeys: String, CodingKey {
+                case id
+                case verificationCode = "verification_code"
+            }
+        }
+        
+        let patientServerId = patient.remoteId?.uuidString ?? patient.id.uuidString
+        
+        let request = CreateRxRequest(
+            patientId: patientServerId,
+            diagnosis: rx.diagnosis,
+            diagnosisCode: rx.diagnosisCode,
+            notes: nil,
+            items: items.map { item in
+                CreateRxItem(
+                    medicationName: item.medicationName,
+                    dosage: item.dosage,
+                    frequency: item.frequency,
+                    duration: item.duration,
+                    quantity: nil
+                )
+            }
+        )
+        
+        do {
+            let response: CreateRxResponse = try await APIClient.shared.post("/api/v1/prescriptions", body: request)
+            // Guardar el remoteId para que el PDF funcione
+            await MainActor.run {
+                rx.remoteId = UUID(uuidString: response.id)
+                if let code = response.verificationCode {
+                    rx.verificationCode = code
+                }
+                try? modelContext.save()
+            }
+            print("✅ Prescription synced: \(response.id)")
+        } catch {
+            print("❌ Prescription sync failed: \(error) — will retry later")
+        }
     }
 }
