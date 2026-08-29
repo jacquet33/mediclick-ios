@@ -240,20 +240,74 @@ struct NewPatientView: View {
         }
     }
     
+    @State private var isSaving = false
+    @State private var saveError: String?
+    
     private func save() {
-        let patient = LocalPatient(doctorId: UUID(), firstName: firstName, lastName: lastName)
-        patient.dni = dni.isEmpty ? nil : dni
-        patient.phone = phone.isEmpty ? nil : phone
-        patient.email = email.isEmpty ? nil : email
-        patient.dateOfBirth = dateOfBirth
-        patient.insuranceProvider = insuranceProvider.isEmpty ? nil : insuranceProvider
-        patient.insuranceNumber = insuranceNumber.isEmpty ? nil : insuranceNumber
-        patient.allergies = allergiesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        patient.chronicConditions = conditionsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        patient.syncStatus = .pendingUpload
-        modelContext.insert(patient)
-        try? modelContext.save()
-        dismiss()
+        guard !firstName.isEmpty, !lastName.isEmpty else { return }
+        isSaving = true
+        saveError = nil
+        
+        Task {
+            struct CreatePatientReq: Encodable {
+                let firstName: String
+                let lastName: String
+                let dni: String?
+                let phone: String?
+                let email: String?
+                let dateOfBirth: String?
+                let insuranceProvider: String?
+                let insuranceNumber: String?
+                let allergies: [String]?
+                let chronicConditions: [String]?
+            }
+            
+            struct CreatePatientResp: Decodable {
+                let id: String
+                let firstName: String
+                let lastName: String
+            }
+            
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            
+            let req = CreatePatientReq(
+                firstName: firstName, lastName: lastName,
+                dni: dni.isEmpty ? nil : dni,
+                phone: phone.isEmpty ? nil : phone,
+                email: email.isEmpty ? nil : email,
+                dateOfBirth: f.string(from: dateOfBirth),
+                insuranceProvider: insuranceProvider.isEmpty ? nil : insuranceProvider,
+                insuranceNumber: insuranceNumber.isEmpty ? nil : insuranceNumber,
+                allergies: allergiesText.isEmpty ? nil : allergiesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) },
+                chronicConditions: conditionsText.isEmpty ? nil : conditionsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            )
+            
+            do {
+                let resp: CreatePatientResp = try await APIClient.shared.post("/api/v1/patients", body: req)
+                
+                // Guardar en local como caché con remoteId
+                await MainActor.run {
+                    let patient = LocalPatient(doctorId: UUID(), firstName: firstName, lastName: lastName)
+                    patient.remoteId = UUID(uuidString: resp.id)
+                    patient.dni = dni.isEmpty ? nil : dni
+                    patient.phone = phone.isEmpty ? nil : phone
+                    patient.email = email.isEmpty ? nil : email
+                    patient.dateOfBirth = dateOfBirth
+                    patient.insuranceProvider = insuranceProvider.isEmpty ? nil : insuranceProvider
+                    patient.insuranceNumber = insuranceNumber.isEmpty ? nil : insuranceNumber
+                    patient.syncStatus = .synced
+                    modelContext.insert(patient)
+                    try? modelContext.save()
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    saveError = error.localizedDescription
+                    isSaving = false
+                }
+            }
+        }
     }
 }
 

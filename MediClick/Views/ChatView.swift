@@ -162,12 +162,41 @@ struct ChatView: View {
     private func sendMessage() {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        let msg = LocalMessage(conversation: conversation, senderType: "doctor", senderId: UUID(), content: text)
-        modelContext.insert(msg)
-        conversation.lastMessageText = text
-        conversation.lastMessageAt = Date()
-        try? modelContext.save()
         messageText = ""
+        
+        Task {
+            struct SendMsgReq: Encodable { let content: String }
+            struct SendMsgResp: Decodable { let id: String; let content: String }
+            
+            let convId = conversation.remoteId?.uuidString ?? conversation.id.uuidString
+            
+            do {
+                let resp: SendMsgResp = try await APIClient.shared.post(
+                    "/api/v1/conversations/\(convId)/messages", body: SendMsgReq(content: text)
+                )
+                
+                await MainActor.run {
+                    let msg = LocalMessage(conversation: conversation, senderType: "doctor", senderId: UUID(), content: text)
+                    msg.remoteId = UUID(uuidString: resp.id)
+                    msg.syncStatus = .synced
+                    modelContext.insert(msg)
+                    conversation.lastMessageText = text
+                    conversation.lastMessageAt = Date()
+                    try? modelContext.save()
+                }
+            } catch {
+                // Guardar local como fallback
+                await MainActor.run {
+                    let msg = LocalMessage(conversation: conversation, senderType: "doctor", senderId: UUID(), content: text)
+                    msg.syncStatus = .pendingUpload
+                    modelContext.insert(msg)
+                    conversation.lastMessageText = text
+                    conversation.lastMessageAt = Date()
+                    try? modelContext.save()
+                }
+                print("❌ Message send failed: \(error)")
+            }
+        }
     }
 }
 

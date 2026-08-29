@@ -172,17 +172,15 @@ struct AppointmentDetailView: View {
                     VStack(spacing: 10) {
                         if appointment.status == "pending" {
                             Button {
-                                appointment.status = "confirmed"
-                                try? modelContext.save()
+                                Task { await changeApptStatus(appointment, to: "confirmed") }
                             } label: {
                                 Label("Confirmar turno", systemImage: "checkmark.circle.fill")
                             }
-                            .buttonStyle(MediButtonStyle(colors: [.mediSuccess, Color(red: 0.10, green: 0.65, blue: 0.48)]))
+                            .buttonStyle(MediButtonStyle(colors: [.mediSuccess]))
                         }
                         if appointment.status == "confirmed" {
                             Button {
-                                appointment.status = "in_progress"
-                                try? modelContext.save()
+                                Task { await changeApptStatus(appointment, to: "in_progress") }
                             } label: {
                                 Label("Iniciar consulta", systemImage: "play.circle.fill")
                             }
@@ -190,18 +188,15 @@ struct AppointmentDetailView: View {
                         }
                         if appointment.status == "in_progress" {
                             Button {
-                                appointment.status = "completed"
-                                try? modelContext.save()
+                                Task { await changeApptStatus(appointment, to: "completed") }
                             } label: {
                                 Label("Completar consulta", systemImage: "checkmark.seal.fill")
                             }
-                            .buttonStyle(MediButtonStyle(colors: [.mediSuccess, Color(red: 0.10, green: 0.65, blue: 0.48)]))
+                            .buttonStyle(MediButtonStyle(colors: [.mediSuccess]))
                         }
                         if appointment.status != "cancelled" && appointment.status != "completed" {
                             Button {
-                                appointment.status = "cancelled"
-                                appointment.cancelledAt = Date()
-                                try? modelContext.save()
+                                Task { await changeApptStatus(appointment, to: "cancelled") }
                             } label: {
                                 Label("Cancelar turno", systemImage: "xmark.circle.fill")
                             }
@@ -214,6 +209,26 @@ struct AppointmentDetailView: View {
         }
         .navigationTitle("Turno")
         .navigationBarTitleDisplayMode(.inline)
+    }
+    private func changeApptStatus(_ appointment: LocalAppointment, to newStatus: String) async {
+        let apptId = appointment.remoteId?.uuidString ?? appointment.id.uuidString
+        
+        struct StatusReq: Encodable { let status: String; let cancelReason: String? }
+        struct StatusResp: Decodable { let id: String; let status: String }
+        
+        do {
+            let _: StatusResp = try await APIClient.shared.put(
+                "/api/v1/appointments/\(apptId)/status",
+                body: StatusReq(status: newStatus, cancelReason: newStatus == "cancelled" ? "Cancelado desde la app" : nil)
+            )
+            await MainActor.run {
+                appointment.status = newStatus
+                if newStatus == "cancelled" { appointment.cancelledAt = Date() }
+                try? modelContext.save()
+            }
+        } catch {
+            print("❌ Status change failed: \(error)")
+        }
     }
 }
 
@@ -304,15 +319,59 @@ struct NewAppointmentView: View {
         }
     }
     
+    @State private var isSaving = false
+    
     private func createAppointment() {
         guard let patient = selectedPatient else { return }
-        let endTime = Calendar.current.date(byAdding: .minute, value: 30, to: startTime) ?? startTime
-        let appt = LocalAppointment(doctorId: UUID(), patient: patient, date: date, startTime: startTime, endTime: endTime)
-        appt.reason = reason.isEmpty ? "Consulta" : reason
-        appt.isFirstVisit = isFirstVisit
-        modelContext.insert(appt)
-        try? modelContext.save()
-        dismiss()
+        isSaving = true
+        
+        Task {
+            struct CreateApptReq: Encodable {
+                let patientId: String
+                let doctorId: String
+                let date: String
+                let startTime: String
+                let endTime: String
+                let reason: String?
+                let isFirstVisit: Bool
+            }
+            struct CreateApptResp: Decodable { let id: String }
+            
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            let tf = DateFormatter()
+            tf.dateFormat = "HH:mm"
+            
+            let endTime = Calendar.current.date(byAdding: .minute, value: 30, to: startTime) ?? startTime
+            let patientServerId = patient.remoteId?.uuidString ?? patient.id.uuidString
+            
+            let req = CreateApptReq(
+                patientId: patientServerId,
+                doctorId: "", // El backend lo toma del JWT
+                date: f.string(from: date),
+                startTime: tf.string(from: self.startTime),
+                endTime: tf.string(from: endTime),
+                reason: reason.isEmpty ? "Consulta" : reason,
+                isFirstVisit: isFirstVisit
+            )
+            
+            do {
+                let resp: CreateApptResp = try await APIClient.shared.post("/api/v1/appointments", body: req)
+                
+                await MainActor.run {
+                    let appt = LocalAppointment(doctorId: UUID(), patient: patient, date: date, startTime: self.startTime, endTime: endTime)
+                    appt.remoteId = UUID(uuidString: resp.id)
+                    appt.reason = reason.isEmpty ? "Consulta" : reason
+                    appt.isFirstVisit = isFirstVisit
+                    appt.syncStatus = .synced
+                    modelContext.insert(appt)
+                    try? modelContext.save()
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run { isSaving = false }
+            }
+        }
     }
 }
 
