@@ -200,29 +200,10 @@ struct PrescriptionDetailView: View {
                     .mediElevated(padding: 14)
                     
                     if let pdfError {
-                        if prescriptionServerId == nil {
-                            // Receta local sin sincronizar — ofrecer sincronizar
-                            Button {
-                                Task { await retrySyncAndGeneratePdf() }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                    Text("Sincronizar receta")
-                                }
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(Color.mediTeal)
-                                .frame(maxWidth: .infinity)
-                                .padding(12)
-                                .background(Color.mediTealSoft)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediTeal.opacity(0.2), lineWidth: 0.5))
-                            }
-                        } else {
-                            Text(pdfError)
-                                .font(.caption)
-                                .foregroundStyle(Color.mediDanger)
-                                .frame(maxWidth: .infinity)
-                        }
+                        Text(pdfError)
+                            .font(.caption)
+                            .foregroundStyle(Color.mediDanger)
+                            .frame(maxWidth: .infinity)
                     }
                     
                     VStack(alignment: .leading, spacing: 12) {
@@ -294,17 +275,21 @@ struct PrescriptionDetailView: View {
     
     // MARK: - PDF Actions
     
-    private var prescriptionServerId: String? {
-        prescription.remoteId?.uuidString.lowercased()
-    }
-    
     private func downloadPdf() async {
-        guard let serverId = prescriptionServerId else {
-            await MainActor.run { pdfError = "Receta no sincronizada con el servidor" }
-            return
-        }
         isLoadingPdf = true
         pdfError = nil
+        
+        // Si no tiene remoteId, sincronizar primero
+        if prescription.remoteId == nil {
+            let synced = await syncToServer()
+            if !synced { return }
+        }
+        
+        guard let serverId = prescription.remoteId?.uuidString.lowercased() else {
+            await MainActor.run { pdfError = "No se pudo sincronizar"; isLoadingPdf = false }
+            return
+        }
+        
         do {
             let data = try await APIClient.shared.download("/api/v1/prescriptions/\(serverId)/pdf")
             let url = savePdfToTemp(data)
@@ -322,44 +307,11 @@ struct PrescriptionDetailView: View {
     }
     
     private func downloadAndShare() async {
-        guard let serverId = prescriptionServerId else {
-            await MainActor.run { pdfError = "Receta no sincronizada con el servidor" }
-            return
-        }
-        isLoadingPdf = true
-        pdfError = nil
-        do {
-            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(serverId)/pdf")
-            let url = savePdfToTemp(data)
-            await MainActor.run {
-                pdfURL = url
-                isLoadingPdf = false
-                if url != nil { showShareSheet = true }
-            }
-        } catch {
-            await MainActor.run {
-                pdfError = "Error: \(error.localizedDescription)"
-                isLoadingPdf = false
-            }
-        }
+        await downloadPdf()
     }
     
-    private func savePdfToTemp(_ data: Data) -> URL? {
-        let patientName = prescription.patient?.fullName.replacingOccurrences(of: " ", with: "_") ?? "receta"
-        let fileName = "Receta_\(patientName)_\(Date.now.formatted(.dateTime.day().month().year())).pdf"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-        do {
-            try data.write(to: url)
-            return url
-        } catch {
-            return nil
-        }
-    }
-    
-    private func retrySyncAndGeneratePdf() async {
-        isLoadingPdf = true
-        pdfError = nil
-        
+    /// Sincroniza paciente + receta al servidor. Retorna true si OK.
+    private func syncToServer() async -> Bool {
         struct CreatePatientReq: Encodable {
             let firstName: String; let lastName: String
             let phone: String?; let email: String?; let dni: String?
@@ -381,7 +333,7 @@ struct PrescriptionDetailView: View {
         
         guard let patient = prescription.patient else {
             await MainActor.run { pdfError = "Sin paciente asociado"; isLoadingPdf = false }
-            return
+            return false
         }
         
         do {
@@ -402,8 +354,8 @@ struct PrescriptionDetailView: View {
             }
             
             guard let pid = patientServerId else {
-                await MainActor.run { pdfError = "No se pudo sincronizar el paciente"; isLoadingPdf = false }
-                return
+                await MainActor.run { pdfError = "Error sincronizando paciente"; isLoadingPdf = false }
+                return false
             }
             
             // 2. Sincronizar receta
@@ -415,32 +367,41 @@ struct PrescriptionDetailView: View {
                 items: (prescription.items ?? []).map { item in
                     CreateRxItem(
                         medicationName: item.medicationName,
-                        dosage: item.dosage,
-                        frequency: item.frequency,
-                        duration: item.duration,
-                        quantity: nil
+                        dosage: item.dosage, frequency: item.frequency,
+                        duration: item.duration, quantity: nil
                     )
                 }
             )
             
             let response: CreateRxResponse = try await APIClient.shared.post("/api/v1/prescriptions", body: request)
-            
             await MainActor.run {
                 prescription.remoteId = UUID(uuidString: response.id)
                 if let code = response.verificationCode { prescription.verificationCode = code }
                 prescription.syncStatus = .synced
                 try? prescription.modelContext?.save()
             }
-            
-            // 3. Descargar PDF
-            await downloadPdf()
+            return true
         } catch {
             await MainActor.run {
                 pdfError = "Error: \(error.localizedDescription)"
                 isLoadingPdf = false
             }
+            return false
         }
     }
+    
+    private func savePdfToTemp(_ data: Data) -> URL? {
+        let patientName = prescription.patient?.fullName.replacingOccurrences(of: " ", with: "_") ?? "receta"
+        let fileName = "Receta_\(patientName)_\(Date.now.formatted(.dateTime.day().month().year())).pdf"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        do {
+            try data.write(to: url)
+            return url
+        } catch {
+            return nil
+        }
+    }
+    
 }
 
 // ShareSheet is defined in BatchDetailView.swift
