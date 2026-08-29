@@ -311,7 +311,7 @@ struct PrescriptionDetailView: View {
             await MainActor.run {
                 pdfURL = url
                 isLoadingPdf = false
-                if let url { UIApplication.shared.open(url) }
+                if url != nil { showShareSheet = true }
             }
         } catch {
             await MainActor.run {
