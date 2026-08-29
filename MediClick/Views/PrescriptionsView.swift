@@ -275,49 +275,51 @@ struct PrescriptionDetailView: View {
     
     // MARK: - PDF Actions
     
+    private var prescriptionServerId: String? {
+        prescription.remoteId?.uuidString.lowercased()
+    }
+    
     private func downloadPdf() async {
+        guard let serverId = prescriptionServerId else {
+            await MainActor.run { pdfError = "Receta no sincronizada con el servidor" }
+            return
+        }
         isLoadingPdf = true
         pdfError = nil
         do {
-            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(prescription.remoteId?.uuidString ?? prescription.id.uuidString)/pdf")
+            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(serverId)/pdf")
             let url = savePdfToTemp(data)
             await MainActor.run {
                 pdfURL = url
                 isLoadingPdf = false
                 if let url { UIApplication.shared.open(url) }
             }
-        } catch let APIError.server(status, message) {
-            await MainActor.run {
-                pdfError = "Error \(status): \(message ?? "desconocido")"
-                isLoadingPdf = false
-            }
         } catch {
             await MainActor.run {
-                pdfError = error.localizedDescription
+                pdfError = "Error: \(error.localizedDescription)"
                 isLoadingPdf = false
             }
         }
     }
     
     private func downloadAndShare() async {
+        guard let serverId = prescriptionServerId else {
+            await MainActor.run { pdfError = "Receta no sincronizada con el servidor" }
+            return
+        }
         isLoadingPdf = true
         pdfError = nil
         do {
-            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(prescription.remoteId?.uuidString ?? prescription.id.uuidString)/pdf")
+            let data = try await APIClient.shared.download("/api/v1/prescriptions/\(serverId)/pdf")
             let url = savePdfToTemp(data)
             await MainActor.run {
                 pdfURL = url
                 isLoadingPdf = false
                 if url != nil { showShareSheet = true }
             }
-        } catch let APIError.server(status, message) {
-            await MainActor.run {
-                pdfError = "Error \(status): \(message ?? "desconocido")"
-                isLoadingPdf = false
-            }
         } catch {
             await MainActor.run {
-                pdfError = error.localizedDescription
+                pdfError = "Error: \(error.localizedDescription)"
                 isLoadingPdf = false
             }
         }
