@@ -340,6 +340,87 @@ struct PrescriptionDetailView: View {
 
 // ShareSheet is defined in BatchDetailView.swift
 
+// MARK: - Template Picker Sheet
+
+struct TemplatePickerSheet: View {
+    let templates: [NewPrescriptionView.RxTemplate]
+    var onSelect: (NewPrescriptionView.RxTemplate) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                MediBackground()
+                
+                if templates.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 32))
+                            .foregroundStyle(Color.mediTextMuted)
+                        Text("No hay plantillas cargadas")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.mediTextSoft)
+                        Text("Las plantillas se crean desde la configuración o se precargan con la migración.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.mediTextMuted)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 8) {
+                            ForEach(templates) { t in
+                                Button {
+                                    onSelect(t)
+                                    dismiss()
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(Color.mediTealSoft)
+                                                .frame(width: 36, height: 36)
+                                            Image(systemName: "doc.text")
+                                                .font(.system(size: 15))
+                                                .foregroundStyle(Color.mediTeal)
+                                        }
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(t.name)
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundStyle(Color.mediText)
+                                            if let cat = t.category {
+                                                Text(cat)
+                                                    .font(.system(size: 12))
+                                                    .foregroundStyle(Color.mediTextMuted)
+                                            }
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(Color.mediTextMuted)
+                                    }
+                                    .padding(12)
+                                    .background(Color.mediSurface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mediBorder, lineWidth: 0.5))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(20)
+                    }
+                }
+            }
+            .navigationTitle("Plantillas")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cerrar") { dismiss() }.foregroundStyle(Color.mediTeal)
+                }
+            }
+        }
+    }
+}
+
 struct NewPrescriptionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -348,19 +429,87 @@ struct NewPrescriptionView: View {
     @State private var selectedPatient: LocalPatient?
     @State private var diagnosis = ""
     @State private var diagnosisCode = ""
-    @State private var medicationName = ""
-    @State private var dosage = ""
-    @State private var frequency = ""
-    @State private var duration = ""
     @State private var daysValid = 30
+    
+    // Medication items (multiple)
+    @State private var medications: [MedItem] = [MedItem()]
+    
+    // Templates
+    @State private var templates: [RxTemplate] = []
+    @State private var showTemplates = false
+    
+    struct MedItem: Identifiable {
+        let id = UUID()
+        var name = ""
+        var amount = ""
+        var unit = "mg"
+        var frequency = "Cada 8 horas"
+        var duration = "7 días"
+        var customFrequency = ""
+        var customDuration = ""
+    }
+    
+    struct RxTemplate: Decodable, Identifiable {
+        let id: String
+        let name: String
+        let category: String?
+        let diagnosis: String?
+        let diagnosisCode: String?
+        let items: [RxTemplateItem]?
+        
+        enum CodingKeys: String, CodingKey {
+            case id, name, category, diagnosis, items
+            case diagnosisCode = "diagnosis_code"
+        }
+    }
+    struct RxTemplateItem: Decodable {
+        let medicationName: String?
+        let dosage: String?
+        let frequency: String?
+        let duration: String?
+        let quantity: Int?
+        
+        enum CodingKeys: String, CodingKey {
+            case dosage, frequency, duration, quantity
+            case medicationName = "medication_name"
+        }
+    }
+    
+    static let units = ["mg", "g", "ml", "gotas", "comp.", "cáps.", "sobres", "ampollas", "puffs", "UI", "mcg", "cucharaditas"]
+    static let frequencies = ["Cada 4 horas", "Cada 6 horas", "Cada 8 horas", "Cada 12 horas", "Cada 24 horas",
+                              "1 vez al día", "2 veces al día", "3 veces al día",
+                              "En ayunas", "Antes de dormir",
+                              "Cada 48 horas", "1 vez por semana",
+                              "Según necesidad", "Otro"]
+    static let durations = ["3 días", "5 días", "7 días", "10 días", "14 días", "21 días",
+                            "30 días", "60 días", "90 días", "Uso continuo", "Otro"]
     
     var body: some View {
         NavigationStack {
             ZStack {
                 MediBackground()
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        VStack(spacing: 14) {
+                    VStack(spacing: 16) {
+                        // Template selector
+                        Button { loadTemplates() } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 14))
+                                Text("Usar plantilla")
+                                    .font(.system(size: 14, weight: .medium))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 11))
+                            }
+                            .foregroundStyle(Color.mediTeal)
+                            .padding(14)
+                            .background(Color.mediTealSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mediTeal.opacity(0.2), lineWidth: 0.5))
+                        }
+                        
+                        // Paciente
+                        VStack(spacing: 12) {
                             MediSectionHeader(title: "Paciente", icon: "person.fill")
                             Menu {
                                 ForEach(patients) { p in
@@ -368,53 +517,201 @@ struct NewPrescriptionView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Image(systemName: "person.circle.fill").foregroundStyle(Color.mediPrimary)
+                                    Image(systemName: "person.circle.fill")
+                                        .foregroundStyle(Color.mediTeal)
                                     Text(selectedPatient?.fullName ?? "Seleccionar paciente")
                                         .foregroundStyle(selectedPatient == nil ? Color.mediTextMuted : Color.mediText)
                                     Spacer()
-                                    Image(systemName: "chevron.down").font(.caption).foregroundStyle(Color.mediPrimary)
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(Color.mediTextMuted)
                                 }
-                                .padding(16)
-                                .background(Color.white.opacity(0.7))
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.mediPrimary.opacity(0.15), lineWidth: 1))
+                                .padding(14)
+                                .background(Color.mediBgSoft)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
                             }
                         }
-                        .mediElevated(padding: 18)
+                        .mediElevated()
                         
-                        VStack(spacing: 14) {
+                        // Diagnóstico
+                        VStack(spacing: 12) {
                             MediSectionHeader(title: "Diagnóstico", icon: "stethoscope")
-                            MediTextField(icon: "text.alignleft", placeholder: "Diagnóstico", text: $diagnosis)
-                            MediTextField(icon: "number", placeholder: "Código CIE-10", text: $diagnosisCode)
+                            MediTextField(label: "Diagnóstico", icon: "text.alignleft", placeholder: "Ej: Faringitis aguda", text: $diagnosis)
+                            MediTextField(label: "Código CIE-10", icon: "number", placeholder: "Ej: J02.9", text: $diagnosisCode)
                         }
-                        .mediElevated(padding: 18)
+                        .mediElevated()
                         
-                        VStack(spacing: 14) {
-                            MediSectionHeader(title: "Medicamento", icon: "pills.fill")
-                            MediTextField(icon: "pills", placeholder: "Nombre del medicamento", text: $medicationName)
-                            MediTextField(icon: "scalemass", placeholder: "Dosis (ej: 10mg)", text: $dosage)
-                            MediTextField(icon: "clock", placeholder: "Frecuencia", text: $frequency)
-                            MediTextField(icon: "calendar", placeholder: "Duración (ej: 30 días)", text: $duration)
-                            
-                            HStack {
-                                Text("Validez: \(daysValid) días")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.mediText)
-                                Spacer()
-                                Stepper("", value: $daysValid, in: 1...365, step: 15)
-                                    .labelsHidden()
-                                    .tint(Color.mediPrimary)
+                        // Medicamentos
+                        ForEach($medications) { $med in
+                            VStack(spacing: 12) {
+                                HStack {
+                                    MediSectionHeader(title: "Medicamento", icon: "pills.fill")
+                                    Spacer()
+                                    if medications.count > 1 {
+                                        Button {
+                                            medications.removeAll { $0.id == med.id }
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.system(size: 18))
+                                                .foregroundStyle(Color.mediDanger.opacity(0.6))
+                                        }
+                                    }
+                                }
+                                
+                                MediTextField(label: "Nombre", icon: "pills", placeholder: "Ej: Amoxicilina", text: $med.name)
+                                
+                                // Dosis: cantidad + unidad
+                                HStack(spacing: 8) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("CANTIDAD")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(Color.mediTextMuted)
+                                            .tracking(0.3)
+                                        TextField("500", text: $med.amount)
+                                            .font(.system(size: 15))
+                                            .keyboardType(.decimalPad)
+                                            .padding(14)
+                                            .background(Color.mediBgSoft)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("UNIDAD")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(Color.mediTextMuted)
+                                            .tracking(0.3)
+                                        Menu {
+                                            ForEach(Self.units, id: \.self) { u in
+                                                Button(u) { med.unit = u }
+                                            }
+                                        } label: {
+                                            HStack {
+                                                Text(med.unit)
+                                                    .font(.system(size: 15))
+                                                    .foregroundStyle(Color.mediText)
+                                                Spacer()
+                                                Image(systemName: "chevron.down")
+                                                    .font(.system(size: 10))
+                                                    .foregroundStyle(Color.mediTextMuted)
+                                            }
+                                            .padding(14)
+                                            .background(Color.mediBgSoft)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                                
+                                // Frecuencia
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("FRECUENCIA")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.mediTextMuted)
+                                        .tracking(0.3)
+                                    Menu {
+                                        ForEach(Self.frequencies, id: \.self) { f in
+                                            Button(f) { med.frequency = f }
+                                        }
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "clock")
+                                                .font(.system(size: 14))
+                                                .foregroundStyle(Color.mediTeal)
+                                            Text(med.frequency)
+                                                .font(.system(size: 15))
+                                                .foregroundStyle(Color.mediText)
+                                            Spacer()
+                                            Image(systemName: "chevron.down")
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(Color.mediTextMuted)
+                                        }
+                                        .padding(14)
+                                        .background(Color.mediBgSoft)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                                    }
+                                }
+                                if med.frequency == "Otro" {
+                                    MediTextField(icon: "clock", placeholder: "Frecuencia personalizada", text: $med.customFrequency)
+                                }
+                                
+                                // Duración
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("DURACIÓN")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.mediTextMuted)
+                                        .tracking(0.3)
+                                    Menu {
+                                        ForEach(Self.durations, id: \.self) { d in
+                                            Button(d) { med.duration = d }
+                                        }
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "calendar")
+                                                .font(.system(size: 14))
+                                                .foregroundStyle(Color.mediTeal)
+                                            Text(med.duration)
+                                                .font(.system(size: 15))
+                                                .foregroundStyle(Color.mediText)
+                                            Spacer()
+                                            Image(systemName: "chevron.down")
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(Color.mediTextMuted)
+                                        }
+                                        .padding(14)
+                                        .background(Color.mediBgSoft)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                                    }
+                                }
+                                if med.duration == "Otro" {
+                                    MediTextField(icon: "calendar", placeholder: "Duración personalizada", text: $med.customDuration)
+                                }
                             }
-                            .padding(.horizontal, 4)
+                            .mediElevated()
                         }
-                        .mediElevated(padding: 18)
+                        
+                        // Agregar otro medicamento
+                        Button {
+                            withAnimation { medications.append(MedItem()) }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 16))
+                                Text("Agregar medicamento")
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundStyle(Color.mediTeal)
+                            .frame(maxWidth: .infinity)
+                            .padding(12)
+                            .background(Color.mediTealSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        
+                        // Validez
+                        HStack {
+                            Text("Validez: \(daysValid) días")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.mediText)
+                            Spacer()
+                            Stepper("", value: $daysValid, in: 1...365, step: 15)
+                                .labelsHidden()
+                        }
+                        .padding(14)
+                        .background(Color.mediSurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mediBorder, lineWidth: 0.5))
                         
                         Button { save() } label: {
                             Label("Emitir receta", systemImage: "doc.badge.plus")
                         }
                         .buttonStyle(MediButtonStyle())
-                        .disabled(selectedPatient == nil || diagnosis.isEmpty || medicationName.isEmpty)
-                        .opacity(selectedPatient == nil || diagnosis.isEmpty || medicationName.isEmpty ? 0.6 : 1)
+                        .disabled(selectedPatient == nil || diagnosis.isEmpty || medications.first?.name.isEmpty != false)
+                        .opacity(selectedPatient == nil || diagnosis.isEmpty || medications.first?.name.isEmpty != false ? 0.5 : 1)
                     }
                     .padding(20)
                 }
@@ -423,8 +720,42 @@ struct NewPrescriptionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }.foregroundStyle(Color.mediPrimary)
+                    Button("Cancelar") { dismiss() }.foregroundStyle(Color.mediTeal)
                 }
+            }
+            .sheet(isPresented: $showTemplates) {
+                TemplatePickerSheet(templates: templates) { t in
+                    applyTemplate(t)
+                }
+            }
+        }
+    }
+    
+    private func loadTemplates() {
+        Task {
+            do {
+                let t: [RxTemplate] = try await APIClient.shared.get("/api/v1/prescription-templates")
+                await MainActor.run {
+                    templates = t
+                    showTemplates = true
+                }
+            } catch {
+                showTemplates = true // show empty
+            }
+        }
+    }
+    
+    private func applyTemplate(_ t: RxTemplate) {
+        diagnosis = t.diagnosis ?? ""
+        diagnosisCode = t.diagnosisCode ?? ""
+        if let items = t.items, !items.isEmpty {
+            medications = items.map { item in
+                var med = MedItem()
+                med.name = item.medicationName ?? ""
+                if let d = item.dosage { med.amount = d }
+                if let f = item.frequency { med.frequency = f }
+                if let dur = item.duration { med.duration = dur }
+                return med
             }
         }
     }
@@ -436,18 +767,21 @@ struct NewPrescriptionView: View {
         rx.diagnosisCode = diagnosisCode.isEmpty ? nil : diagnosisCode
         rx.verificationCode = "MC-" + String(UUID().uuidString.prefix(8)).uppercased()
         
-        let item = LocalPrescriptionItem(prescription: rx, medicationName: medicationName, dosage: dosage, frequency: frequency)
-        item.duration = duration.isEmpty ? nil : duration
-        
-        modelContext.insert(rx)
-        modelContext.insert(item)
-        try? modelContext.save()
-        
-        // Sincronizar al backend
-        Task {
-            await syncPrescriptionToServer(rx, items: [item], patient: patient)
+        var localItems: [LocalPrescriptionItem] = []
+        for med in medications where !med.name.isEmpty {
+            let dosageStr = med.amount.isEmpty ? "" : "\(med.amount) \(med.unit)"
+            let freqStr = med.frequency == "Otro" ? med.customFrequency : med.frequency
+            let durStr = med.duration == "Otro" ? med.customDuration : med.duration
+            let item = LocalPrescriptionItem(prescription: rx, medicationName: med.name, dosage: dosageStr, frequency: freqStr)
+            item.duration = durStr.isEmpty ? nil : durStr
+            modelContext.insert(item)
+            localItems.append(item)
         }
         
+        modelContext.insert(rx)
+        try? modelContext.save()
+        
+        Task { await syncPrescriptionToServer(rx, items: localItems, patient: patient) }
         dismiss()
     }
     
