@@ -328,7 +328,6 @@ struct NewAppointmentView: View {
         Task {
             struct CreateApptReq: Encodable {
                 let patientId: String
-                let doctorId: String
                 let date: String
                 let startTime: String
                 let endTime: String
@@ -347,7 +346,6 @@ struct NewAppointmentView: View {
             
             let req = CreateApptReq(
                 patientId: patientServerId,
-                doctorId: "", // El backend lo toma del JWT
                 date: f.string(from: date),
                 startTime: tf.string(from: self.startTime),
                 endTime: tf.string(from: endTime),
