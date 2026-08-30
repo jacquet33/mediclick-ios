@@ -1,26 +1,20 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - AgendaView
-
 struct AgendaView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \LocalAppointment.startTime) private var appointments: [LocalAppointment]
     @State private var selectedDate = Date()
-    @State private var displayedMonth = Date()
-    @State private var calendarExpanded = true
     @State private var showNewAppointment = false
-    @State private var monthTransitionDirection: Edge = .trailing
     
-    private let calendar = Calendar.current
-    
-    private var dayAppointments: [LocalAppointment] {
-        appointments.filter { calendar.isDate($0.date, inSameDayAs: selectedDate) }
+    private var weekDates: [Date] {
+        let cal = Calendar.current
+        let start = cal.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
+        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
     }
     
-    /// Fechas que tienen al menos un turno (para mostrar dots)
-    private var datesWithAppointments: Set<DateComponents> {
-        Set(appointments.map { calendar.dateComponents([.year, .month, .day], from: $0.date) })
+    private var dayAppointments: [LocalAppointment] {
+        appointments.filter { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
     }
     
     var body: some View {
@@ -29,34 +23,21 @@ struct AgendaView: View {
                 MediBackground()
                 
                 VStack(spacing: 0) {
-                    // ─── Calendario ────────────────────────────
-                    VStack(spacing: 0) {
-                        monthHeader
-                        weekdayLabels
-                        
-                        if calendarExpanded {
-                            monthGrid
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                        } else {
-                            weekStrip
-                                .transition(.opacity.combined(with: .move(edge: .top)))
+                    // Week strip
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(weekDates, id: \.self) { date in
+                                DayChip(date: date,
+                                        isSelected: Calendar.current.isDate(date, inSameDayAs: selectedDate),
+                                        count: appointments.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }.count) {
+                                    withAnimation(.spring(response: 0.3)) { selectedDate = date }
+                                }
+                            }
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                    .background(
-                        Color.white.opacity(0.5)
-                            .clipShape(
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            )
-                            .shadow(color: .mediPrimary.opacity(0.04), radius: 8, y: 4)
-                            .padding(.horizontal, 8)
-                    )
                     
-                    // ─── Separador con fecha seleccionada ──────
-                    selectedDateHeader
-                    
-                    // ─── Lista de turnos ───────────────────────
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 12) {
                             if dayAppointments.isEmpty {
@@ -66,7 +47,7 @@ struct AgendaView: View {
                                     subtitle: "No hay turnos para este día",
                                     actionTitle: "Agendar turno"
                                 ) { showNewAppointment = true }
-                                .padding(.top, 40)
+                                .padding(.top, 60)
                             } else {
                                 ForEach(dayAppointments) { appt in
                                     NavigationLink {
@@ -78,339 +59,30 @@ struct AgendaView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
+                        .padding(20)
                     }
                 }
             }
             .navigationTitle("Agenda")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        // Botón Hoy
-                        if !calendar.isDateInToday(selectedDate) {
-                            Button {
-                                withAnimation(.spring(response: 0.35)) {
-                                    selectedDate = Date()
-                                    displayedMonth = Date()
-                                }
-                            } label: {
-                                Text("Hoy")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(Color.mediCyan)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.mediCyan.opacity(0.12))
-                                    .clipShape(Capsule())
-                            }
+                    Button { showNewAppointment = true } label: {
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient.mediHero)
+                                .frame(width: 34, height: 34)
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
                         }
-                        
-                        // Botón nuevo turno
-                        Button { showNewAppointment = true } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(LinearGradient.mediHero)
-                                    .frame(width: 34, height: 34)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
-                            .shadow(color: .mediCyan.opacity(0.4), radius: 8, y: 3)
-                        }
-                    }
-                }
-                
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        withAnimation(.spring(response: 0.3)) {
-                            calendarExpanded.toggle()
-                        }
-                    } label: {
-                        Image(systemName: calendarExpanded ? "chevron.up.circle" : "chevron.down.circle")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.mediPrimary.opacity(0.6))
+                        .shadow(color: .mediCyan.opacity(0.4), radius: 8, y: 3)
                     }
                 }
             }
             .sheet(isPresented: $showNewAppointment) { NewAppointmentView() }
         }
     }
-    
-    // MARK: - Month Header (< Septiembre 2026 >)
-    
-    private var monthHeader: some View {
-        HStack {
-            Button { changeMonth(by: -1) } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.mediPrimary)
-                    .frame(width: 36, height: 36)
-                    .background(Color.mediPrimary.opacity(0.08))
-                    .clipShape(Circle())
-            }
-            
-            Spacer()
-            
-            Text(monthYearString(from: displayedMonth))
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.mediText)
-                .contentTransition(.numericText())
-            
-            Spacer()
-            
-            Button { changeMonth(by: 1) } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.mediPrimary)
-                    .frame(width: 36, height: 36)
-                    .background(Color.mediPrimary.opacity(0.08))
-                    .clipShape(Circle())
-            }
-        }
-        .padding(.horizontal, 4)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-    }
-    
-    // MARK: - Weekday Labels (Lun Mar Mié ...)
-    
-    private var weekdayLabels: some View {
-        let symbols = calendar.veryShortWeekdaySymbols
-        // Reordenar para que empiece en lunes
-        let firstWeekday = calendar.firstWeekday // 1 = sunday
-        let reordered = Array(symbols[firstWeekday - 1...]) + Array(symbols[..<firstWeekday - 1])
-        
-        return HStack(spacing: 0) {
-            ForEach(reordered, id: \.self) { symbol in
-                Text(symbol.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.mediTextMuted)
-                    .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(.bottom, 6)
-    }
-    
-    // MARK: - Month Grid (calendario completo)
-    
-    private var monthGrid: some View {
-        let days = generateMonthDays(for: displayedMonth)
-        let rows = days.chunked(into: 7)
-        
-        return VStack(spacing: 4) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, week in
-                HStack(spacing: 0) {
-                    ForEach(Array(week.enumerated()), id: \.offset) { _, day in
-                        if let date = day {
-                            CalendarDayCell(
-                                date: date,
-                                isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
-                                isToday: calendar.isDateInToday(date),
-                                isCurrentMonth: calendar.isDate(date, equalTo: displayedMonth, toGranularity: .month),
-                                hasAppointments: datesWithAppointments.contains(
-                                    calendar.dateComponents([.year, .month, .day], from: date)
-                                )
-                            ) {
-                                withAnimation(.spring(response: 0.25)) {
-                                    selectedDate = date
-                                }
-                            }
-                        } else {
-                            Color.clear.frame(maxWidth: .infinity, minHeight: 40)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.bottom, 8)
-        .gesture(
-            DragGesture(minimumDistance: 50)
-                .onEnded { value in
-                    if value.translation.width < -50 {
-                        changeMonth(by: 1)
-                    } else if value.translation.width > 50 {
-                        changeMonth(by: -1)
-                    }
-                }
-        )
-    }
-    
-    // MARK: - Week Strip (vista compacta - solo semana actual)
-    
-    private var weekStrip: some View {
-        let weekDates = currentWeekDates()
-        
-        return HStack(spacing: 6) {
-            ForEach(weekDates, id: \.self) { date in
-                CalendarDayCell(
-                    date: date,
-                    isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
-                    isToday: calendar.isDateInToday(date),
-                    isCurrentMonth: true,
-                    hasAppointments: datesWithAppointments.contains(
-                        calendar.dateComponents([.year, .month, .day], from: date)
-                    )
-                ) {
-                    withAnimation(.spring(response: 0.25)) {
-                        selectedDate = date
-                    }
-                }
-            }
-        }
-        .padding(.bottom, 8)
-    }
-    
-    // MARK: - Selected Date Header
-    
-    private var selectedDateHeader: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "calendar")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.mediCyan)
-            
-            Text(selectedDateString)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(Color.mediText)
-            
-            if !dayAppointments.isEmpty {
-                Text("·")
-                    .foregroundStyle(Color.mediTextMuted)
-                Text("\(dayAppointments.count) turno\(dayAppointments.count == 1 ? "" : "s")")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.mediCyan)
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-    }
-    
-    // MARK: - Helpers
-    
-    private func changeMonth(by value: Int) {
-        withAnimation(.spring(response: 0.35)) {
-            if let newMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) {
-                displayedMonth = newMonth
-            }
-        }
-    }
-    
-    private func monthYearString(from date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "es_AR")
-        f.dateFormat = "MMMM yyyy"
-        return f.string(from: date).capitalized
-    }
-    
-    private var selectedDateString: String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "es_AR")
-        f.dateFormat = "EEEE d 'de' MMMM"
-        return f.string(from: selectedDate).capitalized
-    }
-    
-    private func currentWeekDates() -> [Date] {
-        guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start else {
-            return []
-        }
-        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
-    }
-    
-    /// Generar días del mes incluyendo días vacíos al inicio para alinear columnas
-    private func generateMonthDays(for month: Date) -> [Date?] {
-        guard let range = calendar.range(of: .day, in: .month, for: month),
-              let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: month))
-        else { return [] }
-        
-        // Calcular offset: cuántos días en blanco antes del día 1
-        var weekday = calendar.component(.weekday, from: firstDay)
-        // Ajustar para que lunes = 0
-        let firstWeekday = calendar.firstWeekday
-        var offset = (weekday - firstWeekday + 7) % 7
-        
-        var days: [Date?] = Array(repeating: nil, count: offset)
-        
-        for day in range {
-            if let date = calendar.date(byAdding: .day, value: day - 1, to: firstDay) {
-                days.append(date)
-            }
-        }
-        
-        // Rellenar la última semana para completar la grilla
-        while days.count % 7 != 0 {
-            days.append(nil)
-        }
-        
-        return days
-    }
 }
-
-// MARK: - CalendarDayCell
-
-struct CalendarDayCell: View {
-    let date: Date
-    let isSelected: Bool
-    let isToday: Bool
-    let isCurrentMonth: Bool
-    let hasAppointments: Bool
-    let action: () -> Void
-    
-    private var dayNumber: String {
-        Calendar.current.component(.day, from: date).description
-    }
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                Text(dayNumber)
-                    .font(.system(size: 15, weight: isSelected || isToday ? .bold : .medium, design: .rounded))
-                    .foregroundStyle(dayTextColor)
-                
-                // Dot indicator
-                Circle()
-                    .fill(hasAppointments
-                          ? (isSelected ? .white : Color.mediCyan)
-                          : .clear)
-                    .frame(width: 5, height: 5)
-            }
-            .frame(maxWidth: .infinity, minHeight: 40)
-            .background(
-                Group {
-                    if isSelected {
-                        LinearGradient.mediHero
-                            .clipShape(Circle())
-                    } else if isToday {
-                        Circle()
-                            .stroke(Color.mediCyan, lineWidth: 1.5)
-                    }
-                }
-                .frame(width: 38, height: 38)
-            )
-        }
-        .buttonStyle(.plain)
-        .opacity(isCurrentMonth ? 1.0 : 0.3)
-    }
-    
-    private var dayTextColor: Color {
-        if isSelected { return .white }
-        if !isCurrentMonth { return Color.mediTextMuted }
-        if isToday { return Color.mediCyan }
-        return Color.mediText
-    }
-}
-
-// MARK: - Array Extension
-
-extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        stride(from: 0, to: count, by: size).map {
-            Array(self[$0..<Swift.min($0 + size, count)])
-        }
-    }
-}
-
-// MARK: - DayChip (kept for backward compatibility)
 
 struct DayChip: View {
     let date: Date
@@ -462,8 +134,6 @@ struct DayChip: View {
         .buttonStyle(.plain)
     }
 }
-
-// MARK: - Appointment Detail
 
 struct AppointmentDetailView: View {
     let appointment: LocalAppointment
@@ -520,7 +190,7 @@ struct AppointmentDetailView: View {
                             Button {
                                 Task { await changeApptStatus(appointment, to: "completed") }
                             } label: {
-                                Label("Finalizar consulta", systemImage: "checkmark.seal.fill")
+                                Label("Completar consulta", systemImage: "checkmark.seal.fill")
                             }
                             .buttonStyle(MediButtonStyle(colors: [.mediSuccess]))
                         }
@@ -528,12 +198,11 @@ struct AppointmentDetailView: View {
                             Button {
                                 Task { await changeApptStatus(appointment, to: "cancelled") }
                             } label: {
-                                Label("Cancelar turno", systemImage: "xmark.circle")
+                                Label("Cancelar turno", systemImage: "xmark.circle.fill")
                             }
                             .buttonStyle(MediButtonStyle(isSecondary: true))
                         }
                     }
-                    .padding(.top, 4)
                 }
                 .padding(20)
             }
@@ -541,27 +210,27 @@ struct AppointmentDetailView: View {
         .navigationTitle("Turno")
         .navigationBarTitleDisplayMode(.inline)
     }
-    
-    private func changeApptStatus(_ appt: LocalAppointment, to status: String) async {
-        struct StatusUpdate: Encodable { let status: String }
+    private func changeApptStatus(_ appointment: LocalAppointment, to newStatus: String) async {
+        let apptId = appointment.remoteId?.uuidString ?? appointment.id.uuidString
+        
+        struct StatusReq: Encodable { let status: String; let cancelReason: String? }
+        struct StatusResp: Decodable { let id: String; let status: String }
+        
         do {
-            let _: EmptyResponse = try await APIClient.shared.put(
-                "/api/v1/appointments/\(appt.remoteId?.uuidString ?? "")/status",
-                body: StatusUpdate(status: status)
+            let _: StatusResp = try await APIClient.shared.put(
+                "/api/v1/appointments/\(apptId)/status",
+                body: StatusReq(status: newStatus, cancelReason: newStatus == "cancelled" ? "Cancelado desde la app" : nil)
             )
             await MainActor.run {
-                appt.status = status
+                appointment.status = newStatus
+                if newStatus == "cancelled" { appointment.cancelledAt = Date() }
                 try? modelContext.save()
             }
         } catch {
-            // silently fail
+            print("❌ Status change failed: \(error)")
         }
     }
 }
-
-struct EmptyResponse: Decodable {}
-
-// MARK: - New Appointment
 
 struct NewAppointmentView: View {
     @Environment(\.dismiss) private var dismiss
