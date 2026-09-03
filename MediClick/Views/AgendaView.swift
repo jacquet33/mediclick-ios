@@ -559,7 +559,6 @@ struct AppointmentDetailView: View {
     }
 }
 
-struct EmptyResponse: Decodable {}
 
 // MARK: - New Appointment
 
