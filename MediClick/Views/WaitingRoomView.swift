@@ -7,7 +7,8 @@ struct WaitingRoomView: View {
     @State private var isLoading = true
     @State private var timer: Timer?
     
-    private var waiting: [WRAppointment] { todayAppointments.filter { $0.status == "confirmed" } }
+    private var confirmed: [WRAppointment] { todayAppointments.filter { $0.status == "confirmed" } }
+    private var checkedIn: [WRAppointment] { todayAppointments.filter { $0.status == "checked_in" } }
     private var inProgress: [WRAppointment] { todayAppointments.filter { $0.status == "in_progress" } }
     private var completed: [WRAppointment] { todayAppointments.filter { $0.status == "completed" } }
     private var noShow: [WRAppointment] { todayAppointments.filter { $0.status == "no_show" } }
@@ -17,14 +18,15 @@ struct WaitingRoomView: View {
             MediBackground()
             
             if isLoading {
-                ProgressView().tint(.mediPrimary)
+                ProgressView().tint(.mediTeal)
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
                         // Stats bar
                         HStack(spacing: 8) {
-                            WRStatBubble(count: waiting.count, label: "En espera", color: .mediCyan, icon: "person.crop.circle.badge.clock")
-                            WRStatBubble(count: inProgress.count, label: "Atendiendo", color: .mediSuccess, icon: "stethoscope")
+                            WRStatBubble(count: checkedIn.count, label: "En sala", color: .mediSuccess, icon: "person.fill.checkmark")
+                            WRStatBubble(count: inProgress.count, label: "Atendiendo", color: .mediTeal, icon: "stethoscope")
+                            WRStatBubble(count: confirmed.count, label: "Por llegar", color: .mediWarning, icon: "clock")
                             WRStatBubble(count: completed.count, label: "Atendidos", color: .mediTextMuted, icon: "checkmark.circle")
                         }
                         
@@ -39,23 +41,23 @@ struct WaitingRoomView: View {
                             .mediElevated()
                         }
                         
-                        // Cola de espera
+                        // En sala (checked in — physically present)
                         VStack(alignment: .leading, spacing: 10) {
-                            MediSectionHeader(title: "Sala de espera (\(waiting.count))", icon: "person.crop.circle.badge.clock")
+                            MediSectionHeader(title: "En sala (\(checkedIn.count))", icon: "person.fill.checkmark")
                             
-                            if waiting.isEmpty {
+                            if checkedIn.isEmpty {
                                 VStack(spacing: 8) {
                                     Image(systemName: "chair.lounge")
-                                        .font(.system(size: 30))
+                                        .font(.system(size: 28))
                                         .foregroundStyle(Color.mediTextMuted)
-                                    Text("La sala está vacía")
-                                        .font(.mediBody())
+                                    Text("Nadie en la sala")
+                                        .font(.system(size: 13))
                                         .foregroundStyle(Color.mediTextSoft)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 24)
+                                .padding(.vertical, 20)
                             } else {
-                                ForEach(Array(waiting.enumerated()), id: \.element.id) { idx, appt in
+                                ForEach(Array(checkedIn.enumerated()), id: \.element.id) { idx, appt in
                                     WRPatientCard(appointment: appt, style: .waiting, position: idx + 1) {
                                         Task { await updateStatus(appt.id, "in_progress") }
                                     }
@@ -63,6 +65,19 @@ struct WaitingRoomView: View {
                             }
                         }
                         .mediElevated()
+                        
+                        // Confirmados (por llegar)
+                        if !confirmed.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                MediSectionHeader(title: "Por llegar (\(confirmed.count))", icon: "clock")
+                                ForEach(confirmed) { appt in
+                                    WRPatientCard(appointment: appt, style: .confirmed) {
+                                        Task { await updateStatus(appt.id, "checked_in") }
+                                    }
+                                }
+                            }
+                            .mediElevated()
+                        }
                         
                         // Atendidos
                         if !completed.isEmpty {
@@ -197,7 +212,7 @@ struct WRStatBubble: View {
 
 // MARK: - Patient Card
 
-enum WRCardStyle { case waiting, inProgress, completed, noShow }
+enum WRCardStyle { case confirmed, waiting, inProgress, completed, noShow }
 
 struct WRPatientCard: View {
     let appointment: WRAppointment
@@ -212,8 +227,9 @@ struct WRPatientCard: View {
             ZStack {
                 let bg: Color = {
                     switch style {
-                    case .waiting: return .mediCyan
-                    case .inProgress: return .mediSuccess
+                    case .confirmed: return .mediWarning
+                    case .waiting: return .mediSuccess
+                    case .inProgress: return .mediTeal
                     case .completed: return .mediTextMuted
                     case .noShow: return .mediDanger
                     }
@@ -266,7 +282,7 @@ struct WRPatientCard: View {
             Spacer()
             
             // Action button
-            if let onAction, style == .waiting || style == .inProgress {
+            if let onAction, style == .confirmed || style == .waiting || style == .inProgress {
                 Button {
                     isActioning = true
                     onAction()
@@ -292,7 +308,8 @@ struct WRPatientCard: View {
     
     private var styleIcon: String {
         switch style {
-        case .waiting: return "clock"
+        case .confirmed: return "clock"
+        case .waiting: return "person.fill.checkmark"
         case .inProgress: return "stethoscope"
         case .completed: return "checkmark"
         case .noShow: return "person.slash"
@@ -300,10 +317,20 @@ struct WRPatientCard: View {
     }
     
     private var actionIcon: String {
-        style == .waiting ? "play.fill" : "checkmark"
+        switch style {
+        case .confirmed: return "person.badge.plus"    // Mark as arrived
+        case .waiting: return "play.fill"               // Start consultation
+        case .inProgress: return "checkmark"            // Complete
+        default: return ""
+        }
     }
     
     private var actionColor: Color {
-        style == .waiting ? .mediCyan : .mediSuccess
+        switch style {
+        case .confirmed: return .mediSuccess
+        case .waiting: return .mediTeal
+        case .inProgress: return .mediSuccess
+        default: return .mediTextMuted
+        }
     }
 }

@@ -327,6 +327,7 @@ struct MediStatus {
         switch status {
         case "confirmed": return .mediTeal
         case "pending": return .mediWarning
+        case "checked_in": return .mediSuccess
         case "completed": return .mediTextMuted
         case "in_progress": return .mediTeal
         case "cancelled": return .mediDanger
@@ -341,6 +342,7 @@ struct MediStatus {
         switch status {
         case "confirmed": return "Confirmado"
         case "pending": return "Pendiente"
+        case "checked_in": return "En sala"
         case "completed": return "Atendido"
         case "in_progress": return "En curso"
         case "cancelled": return "Cancelado"
