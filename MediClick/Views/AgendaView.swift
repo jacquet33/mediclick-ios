@@ -176,14 +176,17 @@ struct AgendaView: View {
     
     private var weekdayLabels: some View {
         let symbols = calendar.veryShortWeekdaySymbols
-        // Reordenar para que empiece en lunes
-        let firstWeekday = calendar.firstWeekday // 1 = sunday
-        let reordered = Array(symbols[firstWeekday - 1...]) + Array(symbols[..<firstWeekday - 1])
+        let start = calendar.firstWeekday - 1
+        let reordered: [String] = {
+            var r: [String] = []
+            for i in 0..<7 { r.append(symbols[(start + i) % 7]) }
+            return r
+        }()
         
         return HStack(spacing: 0) {
             ForEach(reordered, id: \.self) { symbol in
                 Text(symbol.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.mediTextMuted)
                     .frame(maxWidth: .infinity)
             }
