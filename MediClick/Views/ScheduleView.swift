@@ -192,7 +192,8 @@ struct ScheduleView: View {
     private func load() async {
         defer { Task { @MainActor in isLoading = false } }
 
-        guard let doctorId = auth.doctorId else { return }
+        let doctorId = auth.doctorId
+        guard !doctorId.isEmpty else { return }
 
         // Load schedules
         do {
@@ -237,7 +238,8 @@ struct ScheduleView: View {
     }
 
     private func save() async {
-        guard let doctorId = auth.doctorId else { return }
+        let doctorId = auth.doctorId
+        guard !doctorId.isEmpty else { return }
 
         await MainActor.run { isSaving = true }
 
@@ -271,7 +273,8 @@ struct ScheduleView: View {
     }
 
     private func addException(_ exc: NewException) async {
-        guard let doctorId = auth.doctorId else { return }
+        let doctorId = auth.doctorId
+        guard !doctorId.isEmpty else { return }
 
         let payload = AddExceptionPayload(
             doctorId: doctorId,
