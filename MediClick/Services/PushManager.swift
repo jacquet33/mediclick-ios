@@ -129,9 +129,34 @@ extension PushManager {
             actions: [viewAction],
             intentIdentifiers: []
         )
-        
+
+        let newBookingCategory = UNNotificationCategory(
+            identifier: "NEW_APPOINTMENT",
+            actions: [viewAction],
+            intentIdentifiers: []
+        )
+
+        let bookingRequestCategory = UNNotificationCategory(
+            identifier: "BOOKING_REQUEST",
+            actions: [viewAction],
+            intentIdentifiers: []
+        )
+
+        let newPatientCategory = UNNotificationCategory(
+            identifier: "NEW_PATIENT",
+            actions: [viewAction],
+            intentIdentifiers: []
+        )
+
+        let slotReleasedCategory = UNNotificationCategory(
+            identifier: "slot_released",
+            actions: [viewAction],
+            intentIdentifiers: []
+        )
+
         UNUserNotificationCenter.current().setNotificationCategories([
             appointmentCategory, messageCategory, cancelledCategory, prescriptionCategory,
+            newBookingCategory, bookingRequestCategory, newPatientCategory, slotReleasedCategory,
         ])
     }
 }

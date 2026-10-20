@@ -40,6 +40,7 @@ struct MoreView: View {
 
     @State private var showProfile = false
     @State private var showBookingSettings = false
+    @State private var showSchedule = false
     @State private var showNotifications = false
 
     var body: some View {
@@ -132,6 +133,12 @@ struct MoreView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             MediSectionHeader(title: "Configuración", icon: "gearshape.fill")
 
+                            Button { showSchedule = true } label: {
+                                MoreRow(icon: "clock.fill", title: "Mis horarios",
+                                        subtitle: "Días y horarios de atención", color: .mediTeal)
+                            }
+                            .buttonStyle(.plain)
+
                             Button { showBookingSettings = true } label: {
                                 MoreRow(icon: "link", title: "Reservas online",
                                         subtitle: "Tu enlace para pacientes", color: .mediCyan)
@@ -191,6 +198,7 @@ struct MoreView: View {
             }
             .navigationTitle("Más")
             .sheet(isPresented: $showProfile) { ProfileView() }
+            .sheet(isPresented: $showSchedule) { ScheduleView() }
             .sheet(isPresented: $showBookingSettings) { BookingSettingsView() }
             .sheet(isPresented: $showNotifications) { NotificationsView() }
         }
