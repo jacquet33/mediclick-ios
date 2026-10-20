@@ -166,11 +166,12 @@ struct PatientDetailView: View {
                         .mediElevated()
                     }
                     
-                    // Tabs: Timeline / Turnos / Recetas
+                    // Tabs: Timeline / Turnos / Recetas / Registros
                     HStack(spacing: 0) {
                         HCTab(title: "Timeline", isActive: activeTab == 0) { activeTab = 0 }
                         HCTab(title: "Turnos", isActive: activeTab == 1) { activeTab = 1 }
                         HCTab(title: "Recetas", isActive: activeTab == 2) { activeTab = 2 }
+                        HCTab(title: "Registros", isActive: activeTab == 3) { activeTab = 3 }
                     }
                     .background(Color.mediSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -183,6 +184,9 @@ struct PatientDetailView: View {
                         case 0: timelineView(h.timeline)
                         case 1: appointmentsView(h.appointments)
                         case 2: prescriptionsView(h.prescriptions)
+                        case 3:
+                            let pid = patient.remoteId?.uuidString ?? patient.id.uuidString
+                            MedicalRecordsListView(patientId: pid)
                         default: EmptyView()
                         }
                     }
