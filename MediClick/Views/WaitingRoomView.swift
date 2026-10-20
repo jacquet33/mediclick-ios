@@ -129,14 +129,14 @@ struct WaitingRoomView: View {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         let today = f.string(from: Date())
-        
+
         do {
-            let appts: [WRAppointment] = try await APIClient.shared.get(
+            let response: WRAgendaResponse = try await APIClient.shared.get(
                 "/api/v1/appointments",
                 query: ["date": today]
             )
             await MainActor.run {
-                todayAppointments = appts.sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
+                todayAppointments = response.appointments.sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
                 isLoading = false
             }
         } catch {
@@ -154,6 +154,11 @@ struct WaitingRoomView: View {
             await load()
         } catch { }
     }
+}
+
+// MARK: - Response wrapper
+private struct WRAgendaResponse: Decodable {
+    let appointments: [WRAppointment]
 }
 
 // MARK: - Appointment Model for Waiting Room

@@ -42,7 +42,10 @@ struct BookingSettingsView: View {
     @State private var showCopied = false
     
     private var publicURL: String {
-        "\(APIConfig.baseURL)/reservar/\(publicSlug)"
+        if publicSlug.isEmpty {
+            return "\(APIConfig.baseURL)/reservar/"
+        }
+        return "\(APIConfig.baseURL)/reservar/\(publicSlug)"
     }
     
     var body: some View {

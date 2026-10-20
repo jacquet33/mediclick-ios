@@ -1,6 +1,39 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - Server Response Models (for sync)
+
+/// Respuesta de GET /api/v1/appointments?date=YYYY-MM-DD
+private struct AgendaResponse: Decodable {
+    let appointments: [ServerAppointment]
+}
+
+private struct ServerAppointment: Decodable {
+    let id: String
+    let status: String
+    let date: String
+    let startTime: String
+    let endTime: String
+    let reason: String?
+    let notes: String?
+    let isFirstVisit: Bool?
+    let patientName: String?
+    let patientId: String?
+    let patientPhone: String?
+    let insuranceProvider: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, status, date, reason, notes
+        case startTime = "start_time"
+        case endTime = "end_time"
+        case isFirstVisit = "is_first_visit"
+        case patientName = "patient_name"
+        case patientId = "patient_id"
+        case patientPhone = "patient_phone"
+        case insuranceProvider = "insurance_provider"
+    }
+}
+
 // MARK: - AgendaView
 
 struct AgendaView: View {
@@ -11,9 +44,10 @@ struct AgendaView: View {
     @State private var calendarExpanded = true
     @State private var showNewAppointment = false
     @State private var monthTransitionDirection: Edge = .trailing
-    
+    @State private var isSyncing = false
+
     private let calendar = Calendar.current
-    
+
     private var dayAppointments: [LocalAppointment] {
         appointments.filter { calendar.isDate($0.date, inSameDayAs: selectedDate) }
     }
@@ -132,10 +166,149 @@ struct AgendaView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showNewAppointment) { NewAppointmentView() }
+            .sheet(isPresented: $showNewAppointment, onDismiss: {
+                Task { await syncAppointments(for: selectedDate) }
+            }) {
+                NewAppointmentView()
+            }
+            .task {
+                await syncAppointments(for: selectedDate)
+            }
+            .onChange(of: selectedDate) { _, newDate in
+                Task { await syncAppointments(for: newDate) }
+            }
+            .refreshable {
+                await syncAppointments(for: selectedDate)
+            }
         }
     }
-    
+
+    // MARK: - Server Sync
+
+    /// Sincroniza turnos desde el servidor para la fecha dada
+    private func syncAppointments(for date: Date) async {
+        guard !isSyncing else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        let dateStr = f.string(from: date)
+
+        do {
+            let response: AgendaResponse = try await APIClient.shared.get(
+                "/api/v1/appointments",
+                query: ["date": dateStr]
+            )
+
+            await MainActor.run {
+                mergeServerAppointments(response.appointments, on: date)
+            }
+        } catch {
+            // Silently fail — the user sees whatever is in local cache
+            print("Sync failed: \(error)")
+        }
+    }
+
+    /// Upsert de turnos del servidor en SwiftData
+    @MainActor
+    private func mergeServerAppointments(_ serverAppts: [ServerAppointment], on date: Date) {
+        let tf = DateFormatter()
+        tf.dateFormat = "HH:mm:ss"
+        let tfShort = DateFormatter()
+        tfShort.dateFormat = "HH:mm"
+
+        // IDs remotos que vienen del server
+        let serverIds = Set(serverAppts.compactMap { UUID(uuidString: $0.id) })
+
+        // Buscar appointments locales para este día que tienen remoteId
+        let existingLocal = appointments.filter {
+            calendar.isDate($0.date, inSameDayAs: date) && $0.remoteId != nil
+        }
+        let existingRemoteIds = Set(existingLocal.compactMap { $0.remoteId })
+
+        for sAppt in serverAppts {
+            guard let remoteUUID = UUID(uuidString: sAppt.id) else { continue }
+
+            // Parse times
+            let startDate = tf.date(from: sAppt.startTime) ?? tfShort.date(from: sAppt.startTime) ?? date
+            let endDate = tf.date(from: sAppt.endTime) ?? tfShort.date(from: sAppt.endTime) ?? date
+
+            // Ajustar fecha+hora para que el Date tenga la fecha correcta
+            let startComponents = calendar.dateComponents([.hour, .minute, .second], from: startDate)
+            let endComponents = calendar.dateComponents([.hour, .minute, .second], from: endDate)
+            let fullStart = calendar.date(bySettingHour: startComponents.hour ?? 0,
+                                           minute: startComponents.minute ?? 0,
+                                           second: startComponents.second ?? 0,
+                                           of: date) ?? date
+            let fullEnd = calendar.date(bySettingHour: endComponents.hour ?? 0,
+                                         minute: endComponents.minute ?? 0,
+                                         second: endComponents.second ?? 0,
+                                         of: date) ?? date
+
+            if let existing = existingLocal.first(where: { $0.remoteId == remoteUUID }) {
+                // UPDATE: actualizar estado y datos
+                existing.status = sAppt.status
+                existing.reason = sAppt.reason
+                existing.notes = sAppt.notes
+                existing.startTime = fullStart
+                existing.endTime = fullEnd
+                existing.syncStatus = .synced
+                existing.lastSyncedAt = Date()
+            } else {
+                // INSERT: crear nuevo LocalAppointment
+                // Buscar o crear paciente
+                var patient: LocalPatient? = nil
+                if let patientIdStr = sAppt.patientId, let patientUUID = UUID(uuidString: patientIdStr) {
+                    // Buscar paciente local por remoteId
+                    let descriptor = FetchDescriptor<LocalPatient>(
+                        predicate: #Predicate { $0.remoteId == patientUUID }
+                    )
+                    patient = try? modelContext.fetch(descriptor).first
+
+                    if patient == nil {
+                        // Crear paciente mínimo desde datos del server
+                        let nameParts = (sAppt.patientName ?? "Paciente").split(separator: " ", maxSplits: 1)
+                        let firstName = String(nameParts.first ?? "Paciente")
+                        let lastName = nameParts.count > 1 ? String(nameParts.last!) : ""
+
+                        let newPatient = LocalPatient(doctorId: UUID(), firstName: firstName, lastName: lastName)
+                        newPatient.remoteId = patientUUID
+                        newPatient.phone = sAppt.patientPhone
+                        newPatient.insuranceProvider = sAppt.insuranceProvider
+                        newPatient.syncStatus = .synced
+                        newPatient.lastSyncedAt = Date()
+                        modelContext.insert(newPatient)
+                        patient = newPatient
+                    }
+                }
+
+                let newAppt = LocalAppointment(
+                    doctorId: UUID(),
+                    patient: patient ?? LocalPatient(doctorId: UUID(), firstName: sAppt.patientName ?? "Paciente", lastName: ""),
+                    date: date,
+                    startTime: fullStart,
+                    endTime: fullEnd
+                )
+                newAppt.remoteId = remoteUUID
+                newAppt.status = sAppt.status
+                newAppt.reason = sAppt.reason
+                newAppt.notes = sAppt.notes
+                newAppt.isFirstVisit = sAppt.isFirstVisit ?? false
+                newAppt.syncStatus = .synced
+                newAppt.lastSyncedAt = Date()
+
+                // Si el paciente no tenía ID remoto, insertar el paciente placeholder también
+                if patient == nil {
+                    modelContext.insert(newAppt.patient!)
+                }
+                modelContext.insert(newAppt)
+            }
+        }
+
+        try? modelContext.save()
+    }
+
     // MARK: - Month Header (< Septiembre 2026 >)
     
     private var monthHeader: some View {
