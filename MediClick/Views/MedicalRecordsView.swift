@@ -929,8 +929,9 @@ struct NewMedicalRecordView: View {
                 dismiss()
             }
         } catch {
+            if (error as? APIError)?.requiresLogin == true { return }
             await MainActor.run {
-                errorMessage = "Error: \(error.localizedDescription)"
+                errorMessage = "No se pudo guardar. Intentá de nuevo."
                 isSaving = false
             }
         }

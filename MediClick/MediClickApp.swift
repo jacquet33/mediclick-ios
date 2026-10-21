@@ -69,6 +69,10 @@ struct MediClickApp: App {
                         // Pedir permiso de push al loguearse
                         await PushManager.shared.requestPermission()
                     }
+                    .onReceive(NotificationCenter.default.publisher(for: APIError.sessionExpiredNotification)) { _ in
+                        // Sesión expirada → volver al login sin mostrar errores
+                        authManager.logout()
+                    }
             } else {
                 LoginView()
                     .environment(authManager)

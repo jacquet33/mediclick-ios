@@ -299,13 +299,14 @@ struct PrescriptionDetailView: View {
                 if url != nil { showShareSheet = true }
             }
         } catch {
+            if (error as? APIError)?.requiresLogin == true { return }
             await MainActor.run {
-                pdfError = "Error: \(error.localizedDescription)"
+                pdfError = "No se pudo descargar el PDF. Intentá de nuevo."
                 isLoadingPdf = false
             }
         }
     }
-    
+
     private func downloadAndShare() async {
         await downloadPdf()
     }
@@ -382,8 +383,9 @@ struct PrescriptionDetailView: View {
             }
             return true
         } catch {
+            if (error as? APIError)?.requiresLogin == true { return false }
             await MainActor.run {
-                pdfError = "Error: \(error.localizedDescription)"
+                pdfError = "No se pudo sincronizar. Intentá de nuevo."
                 isLoadingPdf = false
             }
             return false

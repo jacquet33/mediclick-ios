@@ -184,7 +184,10 @@ actor APIClient {
 
             guard let refresh = KeychainHelper.load(key: "refresh_token"),
                   let doctorId = UserDefaults.standard.string(forKey: "doctor_id")
-            else { return false }
+            else {
+                Self.notifySessionExpired()
+                return false
+            }
 
             var req = URLRequest(url: URL(string: APIConfig.baseURL + "/api/v1/auth/refresh")!)
             req.httpMethod = "POST"
@@ -199,7 +202,10 @@ actor APIClient {
                 guard let http = response as? HTTPURLResponse, http.statusCode == 200,
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let access = json["accessToken"] as? String
-                else { return false }
+                else {
+                    Self.notifySessionExpired()
+                    return false
+                }
 
                 KeychainHelper.save(key: "access_token", value: access)
                 if let newRefresh = json["refreshToken"] as? String {
@@ -207,12 +213,21 @@ actor APIClient {
                 }
                 return true
             } catch {
+                Self.notifySessionExpired()
                 return false
             }
         }
 
         refreshTask = task
         return await task.value
+    }
+
+    /// Dispara la notificación global de sesión expirada en el main thread.
+    /// La app escucha esto y redirige al login sin mostrar errores.
+    private static func notifySessionExpired() {
+        Task { @MainActor in
+            NotificationCenter.default.post(name: APIError.sessionExpiredNotification, object: nil)
+        }
     }
 
     private static func message(from data: Data) -> String? {
@@ -257,6 +272,9 @@ enum APIError: LocalizedError {
         if case .sessionExpired = self { return true }
         return false
     }
+
+    /// Notificación global para que la app redirija al login
+    static let sessionExpiredNotification = Notification.Name("APISessionExpired")
 }
 
 struct EmptyResponse: Decodable {}

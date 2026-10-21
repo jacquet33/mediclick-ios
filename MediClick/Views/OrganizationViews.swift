@@ -303,10 +303,11 @@ struct OrganizationDetailView: View {
             let d: OrgDetailResponse = try await APIClient.shared.get("/api/v1/organizations/\(org.id)")
             await MainActor.run { detail = d }
         } catch {
+            if (error as? APIError)?.requiresLogin == true { return }
             await MainActor.run { self.error = error.localizedDescription }
         }
     }
-    
+
     private func loadStats() async {
         do {
             let s: OrgStatsResponse = try await APIClient.shared.get("/api/v1/organizations/\(org.id)/stats")
@@ -586,6 +587,7 @@ struct CreateOrganizationView: View {
                 dismiss()
             }
         } catch {
+            if (error as? APIError)?.requiresLogin == true { return }
             await MainActor.run {
                 self.error = error.localizedDescription
                 isSaving = false
@@ -724,6 +726,7 @@ struct EditOrganizationView: View {
                 dismiss()
             }
         } catch {
+            if (error as? APIError)?.requiresLogin == true { return }
             await MainActor.run {
                 self.error = error.localizedDescription
                 isSaving = false
@@ -854,6 +857,7 @@ struct InviteDoctorView: View {
             try? await Task.sleep(for: .seconds(1.5))
             await MainActor.run { dismiss() }
         } catch let err as APIError {
+            if err.requiresLogin { return }
             await MainActor.run {
                 error = err.localizedDescription
                 isSending = false

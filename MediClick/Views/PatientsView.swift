@@ -631,6 +631,7 @@ struct NewPatientView: View {
                     dismiss()
                 }
             } catch {
+                if (error as? APIError)?.requiresLogin == true { return }
                 await MainActor.run {
                     saveError = error.localizedDescription
                     isSaving = false
