@@ -200,7 +200,7 @@ struct MoreView: View {
             .sheet(isPresented: $showProfile) { ProfileView() }
             .sheet(isPresented: $showSchedule) { ScheduleView() }
             .sheet(isPresented: $showBookingSettings) { BookingSettingsView() }
-            .sheet(isPresented: $showNotifications) { NotificationsView() }
+            .sheet(isPresented: $showNotifications) { ReminderSettingsView() }
         }
     }
 }

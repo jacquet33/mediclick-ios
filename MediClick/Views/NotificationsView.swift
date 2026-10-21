@@ -159,7 +159,7 @@ struct NotificationsView: View {
             notifications[idx].isRead = true
         }
         Task {
-            try? await APIClient.shared.put("/api/v1/notifications/\(notif.id)/read", body: EmptyBody())
+            let _: EmptyResponse? = try? await APIClient.shared.put("/api/v1/notifications/\(notif.id)/read", body: EmptyBody())
         }
     }
 
@@ -169,12 +169,13 @@ struct NotificationsView: View {
         }
         Task {
             let orgDoctorId = auth.activeOrganization?.orgDoctorId ?? ""
-            try? await APIClient.shared.put("/api/v1/notifications/mark-all-read?orgDoctorId=\(orgDoctorId)", body: EmptyBody())
+            let _: EmptyResponse? = try? await APIClient.shared.put("/api/v1/notifications/mark-all-read?orgDoctorId=\(orgDoctorId)", body: EmptyBody())
         }
     }
 }
 
 private struct EmptyBody: Encodable {}
+private struct EmptyResponse: Decodable {}
 
 // MARK: - Notification Model
 

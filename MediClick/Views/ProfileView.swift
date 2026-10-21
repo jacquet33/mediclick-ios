@@ -176,7 +176,7 @@ struct ProfileView: View {
                     Button("Cerrar") { dismiss() }.foregroundStyle(Color.mediPrimary)
                 }
             }
-            .sheet(isPresented: $showNotifications) { NotificationsView() }
+            .sheet(isPresented: $showNotifications) { ReminderSettingsView() }
             .sheet(isPresented: $showBookingSettings) { BookingSettingsView() }
             .sheet(isPresented: $showCreateOrg) {
                 CreateOrganizationView()
@@ -351,9 +351,9 @@ struct ReminderSettings: Codable {
     )
 }
 
-// MARK: - Notifications / Reminder Settings View
+// MARK: - Reminder Settings View
 
-struct NotificationsView: View {
+struct ReminderSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var settings = ReminderSettings.defaults
     @State private var isLoading = true
