@@ -327,6 +327,8 @@ struct MediStatus {
         switch status {
         case "confirmed": return .mediTeal
         case "pending": return .mediWarning
+        case "pending_payment": return .mediWarning
+        case "pending_approval": return .mediWarning
         case "checked_in": return .mediSuccess
         case "completed": return .mediTextMuted
         case "in_progress": return .mediTeal
@@ -337,11 +339,13 @@ struct MediStatus {
         default: return .mediTextMuted
         }
     }
-    
+
     static func label(for status: String) -> String {
         switch status {
         case "confirmed": return "Confirmado"
         case "pending": return "Pendiente"
+        case "pending_payment": return "Esperando seña"
+        case "pending_approval": return "Por aprobar"
         case "checked_in": return "En sala"
         case "completed": return "Atendido"
         case "in_progress": return "En curso"

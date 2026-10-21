@@ -676,6 +676,27 @@ struct AppointmentDetailView: View {
                     .mediElevated()
                     
                     VStack(spacing: 10) {
+                        if appointment.status == "pending_payment" {
+                            HStack(spacing: 8) {
+                                Image(systemName: "creditcard.fill")
+                                    .foregroundStyle(.mediWarning)
+                                Text("Esperando seña del paciente")
+                                    .font(.caption)
+                                    .foregroundStyle(.mediWarning)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(12)
+                            .background(Color.mediWarning.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        if appointment.status == "pending_approval" {
+                            Button {
+                                Task { await changeApptStatus(appointment, to: "confirmed") }
+                            } label: {
+                                Label("Aprobar turno", systemImage: "checkmark.circle.fill")
+                            }
+                            .buttonStyle(MediButtonStyle(colors: [.mediSuccess]))
+                        }
                         if appointment.status == "pending" {
                             Button {
                                 Task { await changeApptStatus(appointment, to: "confirmed") }
