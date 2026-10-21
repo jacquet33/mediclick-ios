@@ -503,7 +503,7 @@ struct AgendaView: View {
         var weekday = calendar.component(.weekday, from: firstDay)
         // Ajustar para que lunes = 0
         let firstWeekday = calendar.firstWeekday
-        var offset = (weekday - firstWeekday + 7) % 7
+        let offset = (weekday - firstWeekday + 7) % 7
         
         var days: [Date?] = Array(repeating: nil, count: offset)
         
@@ -679,10 +679,10 @@ struct AppointmentDetailView: View {
                         if appointment.status == "pending_payment" {
                             HStack(spacing: 8) {
                                 Image(systemName: "creditcard.fill")
-                                    .foregroundStyle(.mediWarning)
+                                    .foregroundStyle(Color.mediWarning)
                                 Text("Esperando seña del paciente")
                                     .font(.caption)
-                                    .foregroundStyle(.mediWarning)
+                                    .foregroundStyle(Color.mediWarning)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(12)
