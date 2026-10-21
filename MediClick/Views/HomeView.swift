@@ -12,6 +12,8 @@ struct HomeView: View {
     @Binding var selectedTab: Int
     @State private var showProfile = false
     @State private var showOrgPicker = false
+    @State private var showNotifications = false
+    @State private var notificationCount: Int = 0
     
     private var todayAppointments: [LocalAppointment] {
         appointments.filter { Calendar.current.isDateInToday($0.date) && $0.status != "cancelled" }
@@ -153,17 +155,41 @@ struct HomeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showProfile = true } label: {
-                        ZStack {
-                            Circle().fill(LinearGradient.medi([.mediCyan.opacity(0.15), .mediSky.opacity(0.1)]))
-                                .frame(width: 36, height: 36)
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(LinearGradient.medi([.mediPrimary, .mediDeep]))
+                    HStack(spacing: 8) {
+                        Button { showNotifications = true } label: {
+                            ZStack {
+                                Circle().fill(LinearGradient.medi([.mediCyan.opacity(0.15), .mediSky.opacity(0.1)]))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: "bell.fill")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(LinearGradient.medi([.mediPrimary, .mediDeep]))
+
+                                if notificationCount > 0 {
+                                    Text("\(min(notificationCount, 99))")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 2)
+                                        .background(Color.mediDanger)
+                                        .clipShape(Capsule())
+                                        .offset(x: 10, y: -10)
+                                }
+                            }
+                        }
+
+                        Button { showProfile = true } label: {
+                            ZStack {
+                                Circle().fill(LinearGradient.medi([.mediCyan.opacity(0.15), .mediSky.opacity(0.1)]))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: "gearshape.fill")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(LinearGradient.medi([.mediPrimary, .mediDeep]))
+                            }
                         }
                     }
                 }
             }
+            .sheet(isPresented: $showNotifications) { NotificationsView() }
             .sheet(isPresented: $showProfile) { ProfileView() }
             .confirmationDialog("Cambiar consultorio", isPresented: $showOrgPicker, titleVisibility: .visible) {
                 ForEach(auth.organizations) { org in
