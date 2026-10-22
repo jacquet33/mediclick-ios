@@ -45,16 +45,34 @@ final class PushManager: NSObject {
         print("❌ Push registration failed: \(error)")
     }
     
-    /// Subir token al backend
+    /// Subir token al backend — reintentar si doctor_id aún no está disponible
     @MainActor
-    private func uploadToken(_ token: String) async {
-        guard let userId = UserDefaults.standard.string(forKey: "doctor_id")
-                ?? UserDefaults.standard.string(forKey: "user_id") else { return }
-        
+    func uploadToken(_ token: String? = nil) async {
+        let tok = token ?? deviceToken
+        guard let tok else {
+            print("⚠️ Push: no device token available yet")
+            return
+        }
+
+        // Intentar obtener userId — si no está, reintentar hasta 5 veces con delay
+        var userId: String?
+        for attempt in 1...5 {
+            userId = UserDefaults.standard.string(forKey: "doctor_id")
+                ?? UserDefaults.standard.string(forKey: "user_id")
+            if userId != nil { break }
+            print("⏳ Push: doctor_id not available yet, retry \(attempt)/5...")
+            try? await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000) // 1s, 2s, 3s...
+        }
+
+        guard let userId else {
+            print("❌ Push: doctor_id never became available — token NOT uploaded")
+            return
+        }
+
         let userType = UserDefaults.standard.string(forKey: "user_type") ?? "doctor"
         let deviceName = UIDevice.current.name
         let osVersion = UIDevice.current.systemVersion
-        
+
         struct RegisterBody: Encodable {
             let userType: String
             let userId: String
@@ -64,21 +82,21 @@ final class PushManager: NSObject {
             let appVersion: String
             let osVersion: String
         }
-        
+
         let body = RegisterBody(
             userType: userType,
             userId: userId,
-            token: token,
+            token: tok,
             platform: "ios",
             deviceName: deviceName,
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
             osVersion: osVersion
         )
-        
+
         do {
             struct OkResponse: Decodable { let ok: Bool }
             let _: OkResponse = try await APIClient.shared.post("/api/v1/push/register", body: body)
-            print("✅ Push token uploaded")
+            print("✅ Push token uploaded for userId=\(userId)")
         } catch {
             print("❌ Failed to upload push token: \(error)")
         }

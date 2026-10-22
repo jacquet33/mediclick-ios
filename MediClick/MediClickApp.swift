@@ -68,6 +68,8 @@ struct MediClickApp: App {
                     .task {
                         // Pedir permiso de push al loguearse
                         await PushManager.shared.requestPermission()
+                        // Re-upload token in case it arrived before login completed
+                        await PushManager.shared.uploadToken()
                     }
                     .onReceive(NotificationCenter.default.publisher(for: APIError.sessionExpiredNotification)) { _ in
                         // Sesión expirada → volver al login sin mostrar errores
