@@ -7,6 +7,6 @@
 	<key>com.apple.security.network.client</key>
 	<true/>
 	<key>aps-environment</key>
-	<string>production</string>
+	<string>development</string>
 </dict>
 </plist>
