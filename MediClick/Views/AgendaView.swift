@@ -300,6 +300,13 @@ struct AgendaView: View {
             }
         }
 
+        // DELETE: eliminar turnos locales que ya no existen en el servidor
+        for local in existingLocal {
+            if let rid = local.remoteId, !serverIds.contains(rid) {
+                modelContext.delete(local)
+            }
+        }
+
         try? modelContext.save()
     }
 
