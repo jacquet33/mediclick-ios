@@ -42,3 +42,9 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
+        aps-environment: production
+    capabilities:
+      Push Notifications: {}
+      Background Modes:
+        modes:
+          - remote-notification

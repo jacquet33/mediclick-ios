@@ -20,23 +20,29 @@ final class PushManager: NSObject {
         let center = UNUserNotificationCenter.current()
         do {
             let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
-            await MainActor.run { isAuthorized = granted }
+            await MainActor.run {
+                isAuthorized = granted
+                print("🔔 Push permission granted: \(granted)")
+            }
             if granted {
                 await MainActor.run {
+                    print("🔔 Calling registerForRemoteNotifications...")
                     UIApplication.shared.registerForRemoteNotifications()
                 }
+                // Wait a bit for the APNs callback to fire
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
             }
         } catch {
-            print("Push permission error: \(error)")
+            print("❌ Push permission error: \(error)")
         }
     }
-    
+
     /// Llamado desde AppDelegate cuando se recibe el token
     func didRegisterForRemoteNotifications(deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
         self.deviceToken = token
-        print("📱 APNs Token: \(token)")
-        
+        print("📱 APNs Token received: \(token.prefix(20))...")
+
         // Enviar al backend
         Task { await uploadToken(token) }
     }
