@@ -147,6 +147,38 @@ struct PatientDetailView: View {
                         MediSectionHeader(title: "Datos", icon: "person.text.rectangle")
                         MediInfoRow(icon: "phone.fill", label: "Teléfono", value: patient.phone ?? "—")
                         MediInfoRow(icon: "envelope.fill", label: "Email", value: patient.email ?? "—")
+
+                        if let phone = patient.phone, !phone.isEmpty {
+                            HStack(spacing: 10) {
+                                Link(destination: URL(string: "tel:\(phone)")!) {
+                                    Label("Llamar", systemImage: "phone.fill")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color.mediSuccess)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(Color.mediSuccess.opacity(0.1))
+                                        .clipShape(Capsule())
+                                }
+
+                                Button {
+                                    WhatsAppHelper.open(
+                                        phone: phone,
+                                        message: "Hola \(patient.fullName), nos comunicamos desde el consultorio. MediClick"
+                                    )
+                                } label: {
+                                    Label("WhatsApp", systemImage: "message.fill")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color(hex: "25D366"))
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(Color(hex: "25D366").opacity(0.1))
+                                        .clipShape(Capsule())
+                                }
+
+                                Spacer()
+                            }
+                            .padding(.top, 4)
+                        }
                     }
                     .mediElevated()
                     

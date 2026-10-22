@@ -327,6 +327,22 @@ struct WaitlistEntryCard: View {
                                 .background(Color.mediSuccess.opacity(0.1))
                                 .clipShape(Capsule())
                         }
+
+                        Button {
+                            let name = entry.patientName ?? "paciente"
+                            WhatsAppHelper.open(
+                                phone: phone,
+                                message: "Hola \(name), se liberó un turno disponible. ¿Le interesa tomarlo? MediClick"
+                            )
+                        } label: {
+                            Label("WA", systemImage: "message.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color(hex: "25D366"))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(Color(hex: "25D366").opacity(0.1))
+                                .clipShape(Capsule())
+                        }
                     }
                     
                     Spacer()

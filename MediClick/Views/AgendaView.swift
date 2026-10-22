@@ -675,6 +675,39 @@ struct AppointmentDetailView: View {
                     }
                     .mediElevated()
                     
+                    // Contacto rápido
+                    if let phone = appointment.patient?.phone, !phone.isEmpty {
+                        HStack(spacing: 10) {
+                            Link(destination: URL(string: "tel:\(phone)")!) {
+                                Label("Llamar", systemImage: "phone.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.mediSuccess)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 11)
+                                    .background(Color.mediSuccess.opacity(0.1))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+
+                            Button {
+                                let msg = WhatsAppHelper.appointmentMessage(
+                                    patientName: appointment.patient?.fullName ?? "",
+                                    date: appointment.date.formatted(date: .long, time: .omitted),
+                                    time: appointment.formattedStartTime
+                                )
+                                WhatsAppHelper.open(phone: phone, message: msg)
+                            } label: {
+                                Label("WhatsApp", systemImage: "message.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color(hex: "25D366"))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 11)
+                                    .background(Color(hex: "25D366").opacity(0.1))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+                        .mediElevated(padding: 14)
+                    }
+
                     VStack(spacing: 10) {
                         if appointment.status == "pending_payment" {
                             HStack(spacing: 8) {
