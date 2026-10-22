@@ -175,7 +175,6 @@ struct NotificationsView: View {
 }
 
 private struct EmptyBody: Encodable {}
-private struct EmptyResponse: Decodable {}
 
 // MARK: - Notification Model
 
