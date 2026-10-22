@@ -172,14 +172,8 @@ struct WRAppointment: Decodable, Identifiable {
     let patientName: String?
     let isFirstVisit: Bool?
     
-    enum CodingKeys: String, CodingKey {
-        case id, status, reason
-        case startTime = "start_time"
-        case endTime = "end_time"
-        case patientName = "patient_name"
-        case isFirstVisit = "is_first_visit"
-    }
-    
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
+
     var timeFormatted: String {
         guard let st = startTime?.prefix(5) else { return "" }
         return String(st)

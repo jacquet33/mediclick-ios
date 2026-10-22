@@ -707,14 +707,7 @@ struct APISchedule: Decodable {
     let slotDurationMinutes: Int?
     let maxPatientsPerSlot: Int?
 
-    enum CodingKeys: String, CodingKey {
-        case id
-        case dayOfWeek = "day_of_week"
-        case startTime = "start_time"
-        case endTime = "end_time"
-        case slotDurationMinutes = "slot_duration_minutes"
-        case maxPatientsPerSlot = "max_patients_per_slot"
-    }
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
 }
 
 struct APIException: Decodable {
@@ -724,13 +717,7 @@ struct APIException: Decodable {
     let startTime: String?
     let endTime: String?
     let reason: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id, date, reason
-        case isAvailable = "is_available"
-        case startTime = "start_time"
-        case endTime = "end_time"
-    }
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
 }
 
 struct SetSchedulePayload: Encodable {

@@ -20,22 +20,8 @@ struct WaitlistEntry: Decodable, Identifiable {
     let patientName: String?
     let patientPhone: String?
     
-    enum CodingKeys: String, CodingKey {
-        case id, status, priority, reason
-        case patientId = "patient_id"
-        case contactName = "contact_name"
-        case contactPhone = "contact_phone"
-        case contactEmail = "contact_email"
-        case desiredDate = "desired_date"
-        case preferredStartTime = "preferred_start_time"
-        case preferredEndTime = "preferred_end_time"
-        case notifiedAt = "notified_at"
-        case notifiedSlotTime = "notified_slot_time"
-        case createdAt = "created_at"
-        case patientName = "patient_name"
-        case patientPhone = "patient_phone"
-    }
-    
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
+
     var displayName: String { contactName ?? patientName ?? "Sin nombre" }
     var displayPhone: String { contactPhone ?? patientPhone ?? "" }
     
@@ -62,11 +48,7 @@ struct WaitlistStats: Decodable {
     let waitingToday: Int
     let waitingTomorrow: Int
     
-    enum CodingKeys: String, CodingKey {
-        case waiting, notified, booked, expired
-        case waitingToday = "waiting_today"
-        case waitingTomorrow = "waiting_tomorrow"
-    }
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
 }
 
 struct AddWaitlistRequest: Encodable {

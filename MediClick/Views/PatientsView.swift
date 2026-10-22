@@ -449,12 +449,8 @@ struct HCAppointment: Decodable, Identifiable {
     let reason: String?
     let doctorName: String?
     
-    enum CodingKeys: String, CodingKey {
-        case id, date, status, reason
-        case startTime = "start_time"
-        case doctorName = "doctor_name"
-    }
-    
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
+
     var dayFormatted: String { String(date.prefix(10).suffix(2)) }
     var monthFormatted: String {
         let months = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
@@ -471,12 +467,8 @@ struct HCPrescription: Decodable, Identifiable {
     let doctorName: String?
     let items: [HCPrescriptionItem]?
     
-    enum CodingKeys: String, CodingKey {
-        case id, diagnosis, status, items
-        case issuedAt = "issued_at"
-        case doctorName = "doctor_name"
-    }
-    
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
+
     var dateFormatted: String {
         guard let d = issuedAt else { return "—" }
         let parts = d.prefix(10).split(separator: "-")
@@ -491,10 +483,7 @@ struct HCPrescriptionItem: Decodable {
     let frequency: String?
     let duration: String?
     
-    enum CodingKeys: String, CodingKey {
-        case dosage, frequency, duration
-        case medicationName = "medication_name"
-    }
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
 }
 
 // MARK: - UI Components

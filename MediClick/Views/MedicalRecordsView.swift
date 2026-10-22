@@ -23,25 +23,7 @@ struct MedicalRecord: Decodable, Identifiable {
     let date: String?
     let createdAt: String?
 
-    enum CodingKeys: String, CodingKey {
-        case id, diagnosis, referrals
-        case patientId = "patient_id"
-        case doctorId = "doctor_id"
-        case appointmentId = "appointment_id"
-        case chiefComplaint = "chief_complaint"
-        case presentIllness = "present_illness"
-        case vitalSigns = "vital_signs"
-        case physicalExam = "physical_exam"
-        case diagnosisCode = "diagnosis_code"
-        case secondaryDiagnoses = "secondary_diagnoses"
-        case treatmentPlan = "treatment_plan"
-        case labOrders = "lab_orders"
-        case imagingOrders = "imaging_orders"
-        case privateNotes = "private_notes"
-        case doctorName = "doctor_name"
-        case date
-        case createdAt = "created_at"
-    }
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
 
     var dateFormatted: String {
         let d = date ?? createdAt ?? ""
@@ -60,16 +42,7 @@ struct VitalSigns: Decodable {
     let weight: Double?
     let height: Double?
 
-    enum CodingKeys: String, CodingKey {
-        case bloodPressure = "bloodPressure"
-        case heartRate = "heartRate"
-        case temperature
-        case respiratoryRate = "respiratoryRate"
-        case spO2
-        case weight, height
-    }
-
-    // Backend stores as JSON, keys might come camelCase or snake_case
+    // Custom init below handles both camelCase and snake_case (JSON blob from DB)
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DynamicKey.self)
         bloodPressure = try container.decodeIfPresent(String.self, forKey: DynamicKey(stringValue: "bloodPressure")!)

@@ -27,25 +27,7 @@ struct OrgMember: Decodable, Identifiable {
     
     var id: String { memberId }
     
-    enum CodingKeys: String, CodingKey {
-        case organizationId = "organization_id"
-        case doctorId = "doctor_id"
-        case staffId = "staff_id"
-        case isOwner = "is_owner"
-        case isActive = "is_active"
-        case roleId = "role_id"
-        case roleCode = "role_code"
-        case roleName = "role_name"
-        case roleLevel = "role_level"
-        case roleCategory = "role_category"
-        case isClinical = "is_clinical"
-        case roleIcon = "role_icon"
-        case roleColor = "role_color"
-        case fullName = "full_name"
-        case medicalLicense = "medical_license"
-        case memberId = "member_id"
-        case department, roomNumber = "room_number", email, phone, specialty
-    }
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
 }
 
 struct RoleOption: Decodable, Identifiable {
@@ -59,11 +41,7 @@ struct RoleOption: Decodable, Identifiable {
     let icon: String?
     let color: String?
     
-    enum CodingKeys: String, CodingKey {
-        case id, code, name, description, category, icon, color
-        case isClinical = "is_clinical"
-        case requiresLicense = "requires_license"
-    }
+    // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
 }
 
 // MARK: - Roles Management View

@@ -21,17 +21,11 @@ private struct ServerAppointment: Decodable {
     let patientId: String?
     let patientPhone: String?
     let insuranceProvider: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id, status, date, reason, notes
-        case startTime = "start_time"
-        case endTime = "end_time"
-        case isFirstVisit = "is_first_visit"
-        case patientName = "patient_name"
-        case patientId = "patient_id"
-        case patientPhone = "patient_phone"
-        case insuranceProvider = "insurance_provider"
-    }
+    let insurancePlan: String?
+    // No CodingKeys — APIClient.decoder usa .convertFromSnakeCase
+    // que ya convierte start_time → startTime automáticamente.
+    // CodingKeys manuales con raw values snake_case conflictuaban
+    // con esa estrategia, causando que la decodificación falle.
 }
 
 // MARK: - AgendaView

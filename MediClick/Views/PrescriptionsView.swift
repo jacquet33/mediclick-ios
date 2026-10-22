@@ -329,7 +329,7 @@ struct PrescriptionDetailView: View {
         }
         struct CreateRxResponse: Decodable {
             let id: String; let verificationCode: String?
-            enum CodingKeys: String, CodingKey { case id; case verificationCode = "verification_code" }
+            // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
         }
         
         guard let patient = prescription.patient else {
@@ -525,10 +525,7 @@ struct NewPrescriptionView: View {
         let diagnosisCode: String?
         let items: [RxTemplateItem]?
         
-        enum CodingKeys: String, CodingKey {
-            case id, name, category, diagnosis, items
-            case diagnosisCode = "diagnosis_code"
-        }
+        // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
     }
     struct RxTemplateItem: Decodable {
         let medicationName: String?
@@ -536,11 +533,7 @@ struct NewPrescriptionView: View {
         let frequency: String?
         let duration: String?
         let quantity: Int?
-        
-        enum CodingKeys: String, CodingKey {
-            case dosage, frequency, duration, quantity
-            case medicationName = "medication_name"
-        }
+        // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
     }
     
     static let units = ["mg", "g", "ml", "gotas", "comp.", "cáps.", "sobres", "ampollas", "puffs", "UI", "mcg", "cucharaditas"]
@@ -871,13 +864,9 @@ struct NewPrescriptionView: View {
         struct CreateRxResponse: Decodable {
             let id: String
             let verificationCode: String?
-            
-            enum CodingKeys: String, CodingKey {
-                case id
-                case verificationCode = "verification_code"
-            }
+            // CodingKeys removed — APIClient.decoder uses .convertFromSnakeCase
         }
-        
+
         let patientServerId = patient.remoteId?.uuidString ?? patient.id.uuidString
         
         let request = CreateRxRequest(
