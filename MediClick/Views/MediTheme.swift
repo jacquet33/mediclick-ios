@@ -1,27 +1,28 @@
 import SwiftUI
 
 // ═══════════════════════════════════════════════════════════
-// MediClick Design System v2 — Modern, neutral, clean
-// Inspired by Apple Health, Airbnb, Linear
+// MediClick Design System v3 — Warm, elegant, serene
+// Palette: Crema · Arena rosada · Tinta · Lavanda azul
 // ═══════════════════════════════════════════════════════════
 
 // MARK: - Colors
 
 extension Color {
-    // Neutrals
-    static let mediBg       = Color(hex: "FAFAF9")
-    static let mediBgSoft   = Color(hex: "F5F5F4")
+    // Crema — base background (50%)
+    static let mediBg       = Color(hex: "FFF7F3")
+    static let mediBgSoft   = Color(hex: "F5EDE8")
     static let mediSurface  = Color.white
-    static let mediBorder   = Color(hex: "E8E5E1")
-    
-    // Text
-    static let mediText     = Color(hex: "1A1A1A")
-    static let mediTextSoft = Color(hex: "666666")
-    static let mediTextMuted = Color(hex: "999999")
-    
-    // Accent — medical teal (used sparingly)
-    static let mediTeal     = Color(hex: "0D9488")
-    static let mediTealSoft = Color(hex: "F0FDFA")
+    // Arena rosada — warm borders/surfaces (15%)
+    static let mediBorder   = Color(hex: "DCC7BB")
+
+    // Tinta — text & dark elements (15%)
+    static let mediText     = Color(hex: "161925")
+    static let mediTextSoft = Color(hex: "5A5D6D")
+    static let mediTextMuted = Color(hex: "9A9DAD")
+
+    // Lavanda azul — accent (20%), NOT for text on light bg
+    static let mediTeal     = Color(hex: "879DFF")
+    static let mediTealSoft = Color(hex: "EEF0FF")
     
     // Semantic
     static let mediDanger   = Color(hex: "EF4444")
@@ -32,10 +33,10 @@ extension Color {
     static let mediSuccessSoft = Color(hex: "ECFDF5")
     
     // Legacy aliases (backward compat — point to new values)
-    static let mediPrimary  = Color(hex: "1A1A1A")
-    static let mediDeep     = Color(hex: "1A1A1A")
-    static let mediCyan     = Color(hex: "0D9488")
-    static let mediSky      = Color(hex: "0D9488")
+    static let mediPrimary  = Color(hex: "161925")   // Tinta
+    static let mediDeep     = Color(hex: "161925")   // Tinta
+    static let mediCyan     = Color(hex: "879DFF")   // Lavanda
+    static let mediSky      = Color(hex: "879DFF")   // Lavanda
     
     // Hex initializer
     init(hex: String) {
@@ -137,9 +138,9 @@ struct MediButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(isSecondary ? Color.mediBgSoft : Color.mediPrimary)
             .foregroundStyle(isSecondary ? Color.mediText : .white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 999))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 999)
                     .stroke(isSecondary ? Color.mediBorder : .clear, lineWidth: 0.5)
             )
             .opacity(configuration.isPressed ? 0.85 : 1)
@@ -148,7 +149,7 @@ struct MediButtonStyle: ButtonStyle {
     }
 }
 
-// Teal button for medical actions
+// Lavanda button for medical actions
 struct MediTealButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -156,7 +157,7 @@ struct MediTealButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(Color.mediTeal)
             .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 999))
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
@@ -368,8 +369,8 @@ extension LinearGradient {
     static func medi(_ colors: [Color] = [.mediTeal]) -> LinearGradient {
         LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
     }
-    static var mediHero: LinearGradient { medi([.mediTeal]) }
-    static var mediBorder: LinearGradient { medi([Color.mediBorder]) }
+    static var mediHero: LinearGradient { medi([Color(hex: "7B91F5"), .mediTeal]) }
+    static var mediBorder: LinearGradient { medi([Color.mediBorder]) }  // Arena rosada
     static var mediShine: LinearGradient {
         LinearGradient(colors: [.white.opacity(0.08), .clear], startPoint: .top, endPoint: .bottom)
     }
