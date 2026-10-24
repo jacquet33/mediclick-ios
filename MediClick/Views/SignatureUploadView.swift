@@ -46,15 +46,15 @@ struct SignatureUploadView: View {
                             MediSectionHeader(title: "Vista previa", icon: "eye.fill")
 
                             ZStack {
+                                let dashedStroke = StrokeStyle(lineWidth: 1, dash: [6, 4])
+                                let borderColor = Color.mediPrimary.opacity(0.3)
                                 RoundedRectangle(cornerRadius: 16)
                                     .fill(Color.white)
                                     .frame(height: 160)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 16)
-                                            .strokeBorder(
-                                                style: StrokeStyle(lineWidth: 1, dash: [6, 4])
-                                            )
-                                            .foregroundStyle(Color.mediPrimary.opacity(0.3))
+                                            .strokeBorder(style: dashedStroke)
+                                            .foregroundStyle(borderColor)
                                     )
 
                                 if let signatureImage {
