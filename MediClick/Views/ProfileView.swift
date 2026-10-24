@@ -12,6 +12,7 @@ struct ProfileView: View {
     @State private var showCreateOrg = false
     @State private var showOrgDetail: AuthManager.OrgInfo?
     @State private var showInvitations = false
+    @State private var showSignature = false
     
     var body: some View {
         NavigationStack {
@@ -151,6 +152,9 @@ struct ProfileView: View {
                             SettingRow(icon: "link", title: "Reservas online", color: .mediSuccess) {
                                 showBookingSettings = true
                             }
+                            SettingRow(icon: "signature", title: "Firma digital", color: .mediPrimary) {
+                                showSignature = true
+                            }
                             SettingRow(icon: "clock.fill", title: "Mis horarios", color: .mediCyan) { }
                             SettingRow(icon: "creditcard.fill", title: "Honorarios", color: .mediSuccess) { }
                             SettingRow(icon: "lock.fill", title: "Seguridad", color: .mediPrimary) { }
@@ -184,6 +188,10 @@ struct ProfileView: View {
             }
             .sheet(item: $showOrgDetail) { org in
                 OrganizationDetailView(org: org)
+                    .environment(auth)
+            }
+            .sheet(isPresented: $showSignature) {
+                SignatureUploadView()
                     .environment(auth)
             }
             .sheet(isPresented: $showInvitations) {
