@@ -106,10 +106,11 @@ struct PrescriptionCardPro: View {
             HStack {
                 HStack(spacing: 5) {
                     Image(systemName: "person.fill").font(.caption2)
+                        .foregroundStyle(Color.mediTextSoft)
                     Text(prescription.patient?.fullName ?? "")
-                        .font(.caption)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.mediText)
                 }
-                .foregroundStyle(Color.mediTextSoft)
                 Spacer()
                 if let code = prescription.verificationCode {
                     Text(code)

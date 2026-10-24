@@ -57,6 +57,7 @@ struct PatientsView: View {
                             }
                             .padding(.vertical, 4)
                         }
+                        .listRowBackground(Color.mediSurface)
                     }
                 }
                 .scrollContentBackground(.hidden)
@@ -203,7 +204,7 @@ struct PatientDetailView: View {
                         HCTab(title: "Timeline", isActive: activeTab == 0) { activeTab = 0 }
                         HCTab(title: "Turnos", isActive: activeTab == 1) { activeTab = 1 }
                         HCTab(title: "Recetas", isActive: activeTab == 2) { activeTab = 2 }
-                        HCTab(title: "Registros", isActive: activeTab == 3) { activeTab = 3 }
+                        HCTab(title: "HC", isActive: activeTab == 3) { activeTab = 3 }
                     }
                     .background(Color.mediSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 10))

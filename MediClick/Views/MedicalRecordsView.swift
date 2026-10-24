@@ -7,17 +7,30 @@ struct MedicalRecord: Decodable, Identifiable {
     let patientId: String
     let doctorId: String
     let appointmentId: String?
+    let recordType: String?
     let chiefComplaint: String
     let presentIllness: String?
+    let personalHistory: String?
+    let familyHistory: String?
+    let currentMedications: String?
+    let allergies: String?
+    let habits: String?
+    let systemsReview: String?
+    let otherSymptoms: String?
     let vitalSigns: VitalSigns?
     let physicalExam: String?
+    let findings: String?
     let diagnosis: String
     let diagnosisCode: String?
     let secondaryDiagnoses: [SecondaryDiagnosis]?
     let treatmentPlan: String?
+    let instructions: String?
     let labOrders: [String]?
     let imagingOrders: [String]?
     let referrals: [String]?
+    let followUp: String?
+    let prevention: String?
+    let occupation: String?
     let privateNotes: String?
     let doctorName: String?
     let date: String?
@@ -41,6 +54,8 @@ struct VitalSigns: Decodable {
     let spO2: Int?
     let weight: Double?
     let height: Double?
+    let waistCircumference: Double?
+    let shoulderWidth: Double?
 
     // Custom init below handles both camelCase and snake_case (JSON blob from DB)
     init(from decoder: Decoder) throws {
@@ -56,11 +71,16 @@ struct VitalSigns: Decodable {
             ?? container.decodeIfPresent(Int.self, forKey: DynamicKey(stringValue: "sp_o2")!)
         weight = try container.decodeIfPresent(Double.self, forKey: DynamicKey(stringValue: "weight")!)
         height = try container.decodeIfPresent(Double.self, forKey: DynamicKey(stringValue: "height")!)
+        waistCircumference = try container.decodeIfPresent(Double.self, forKey: DynamicKey(stringValue: "waistCircumference")!)
+            ?? container.decodeIfPresent(Double.self, forKey: DynamicKey(stringValue: "waist_circumference")!)
+        shoulderWidth = try container.decodeIfPresent(Double.self, forKey: DynamicKey(stringValue: "shoulderWidth")!)
+            ?? container.decodeIfPresent(Double.self, forKey: DynamicKey(stringValue: "shoulder_width")!)
     }
 
     var isEmpty: Bool {
         bloodPressure == nil && heartRate == nil && temperature == nil &&
-        respiratoryRate == nil && spO2 == nil && weight == nil && height == nil
+        respiratoryRate == nil && spO2 == nil && weight == nil && height == nil &&
+        waistCircumference == nil && shoulderWidth == nil
     }
 }
 
@@ -81,17 +101,30 @@ struct SecondaryDiagnosis: Decodable {
 struct CreateRecordPayload: Encodable {
     let patientId: String
     let appointmentId: String?
+    let recordType: String?
     let chiefComplaint: String
     let presentIllness: String?
+    let personalHistory: String?
+    let familyHistory: String?
+    let currentMedications: String?
+    let allergies: String?
+    let habits: String?
+    let systemsReview: String?
+    let otherSymptoms: String?
     let vitalSigns: VitalSignsPayload?
     let physicalExam: String?
+    let findings: String?
     let diagnosis: String
     let diagnosisCode: String?
     let secondaryDiagnoses: [SecondaryDiagnosisPayload]?
     let treatmentPlan: String?
+    let instructions: String?
     let labOrders: [String]?
     let imagingOrders: [String]?
     let referrals: [String]?
+    let followUp: String?
+    let prevention: String?
+    let occupation: String?
     let privateNotes: String?
 }
 
@@ -103,6 +136,8 @@ struct VitalSignsPayload: Encodable {
     let spO2: Int?
     let weight: Double?
     let height: Double?
+    let waistCircumference: Double?
+    let shoulderWidth: Double?
 }
 
 struct SecondaryDiagnosisPayload: Encodable {
@@ -126,7 +161,7 @@ struct MedicalRecordsListView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 16))
-                    Text("Nueva consulta")
+                    Text("Nueva Historia Clínica")
                         .font(.system(size: 14, weight: .medium))
                 }
                 .foregroundStyle(Color.mediTeal)
@@ -286,9 +321,49 @@ struct MedicalRecordDetailView: View {
                         }
                         .mediElevated()
 
+                        // Occupation
+                        if let occ = record.occupation, !occ.isEmpty {
+                            detailSection("Ocupación", icon: "briefcase.fill", content: occ)
+                        }
+
                         // Present Illness
                         if let pi = record.presentIllness, !pi.isEmpty {
                             detailSection("Enfermedad actual", icon: "waveform.path.ecg", content: pi)
+                        }
+
+                        // Personal History
+                        if let ph = record.personalHistory, !ph.isEmpty {
+                            detailSection("Antecedentes personales", icon: "person.text.rectangle", content: ph)
+                        }
+
+                        // Family History
+                        if let fh = record.familyHistory, !fh.isEmpty {
+                            detailSection("Antecedentes familiares", icon: "figure.2.and.child.holdinghands", content: fh)
+                        }
+
+                        // Current Medications
+                        if let cm = record.currentMedications, !cm.isEmpty {
+                            detailSection("Medicación habitual", icon: "pills.fill", content: cm)
+                        }
+
+                        // Allergies
+                        if let al = record.allergies, !al.isEmpty {
+                            detailSection("Alergias", icon: "exclamationmark.triangle.fill", content: al)
+                        }
+
+                        // Habits
+                        if let hab = record.habits, !hab.isEmpty {
+                            detailSection("Hábitos", icon: "leaf.fill", content: hab)
+                        }
+
+                        // Systems Review
+                        if let sr = record.systemsReview, !sr.isEmpty {
+                            detailSection("Revisión por sistemas", icon: "list.bullet.rectangle", content: sr)
+                        }
+
+                        // Other Symptoms
+                        if let os = record.otherSymptoms, !os.isEmpty {
+                            detailSection("Otros síntomas / negativos", icon: "minus.circle", content: os)
                         }
 
                         // Vital Signs
@@ -318,6 +393,12 @@ struct MedicalRecordDetailView: View {
                                     if let h = vs.height {
                                         vitalCard("Talla", value: String(format: "%.0f", h), unit: "cm", color: .mediTextSoft)
                                     }
+                                    if let wc = vs.waistCircumference {
+                                        vitalCard("Cintura", value: String(format: "%.0f", wc), unit: "cm", color: .mediPrimary)
+                                    }
+                                    if let sw = vs.shoulderWidth {
+                                        vitalCard("Hombros", value: String(format: "%.0f", sw), unit: "cm", color: .mediPrimary)
+                                    }
                                 }
                             }
                             .mediElevated()
@@ -325,7 +406,12 @@ struct MedicalRecordDetailView: View {
 
                         // Physical Exam
                         if let pe = record.physicalExam, !pe.isEmpty {
-                            detailSection("Examen físico", icon: "figure.stand", content: pe)
+                            detailSection("Examen físico evaluado", icon: "figure.stand", content: pe)
+                        }
+
+                        // Findings
+                        if let f = record.findings, !f.isEmpty {
+                            detailSection("Hallazgos", icon: "magnifyingglass", content: f)
                         }
 
                         // Diagnosis
@@ -365,6 +451,11 @@ struct MedicalRecordDetailView: View {
                             detailSection("Plan de tratamiento", icon: "list.clipboard.fill", content: tp)
                         }
 
+                        // Instructions
+                        if let inst = record.instructions, !inst.isEmpty {
+                            detailSection("Indicaciones", icon: "text.badge.checkmark", content: inst)
+                        }
+
                         // Orders
                         if let labs = record.labOrders, !labs.isEmpty {
                             ordersSection("Estudios de laboratorio", icon: "flask.fill", items: labs, color: .mediTeal)
@@ -376,6 +467,16 @@ struct MedicalRecordDetailView: View {
 
                         if let refs = record.referrals, !refs.isEmpty {
                             ordersSection("Derivaciones", icon: "arrow.triangle.branch", items: refs, color: .mediWarning)
+                        }
+
+                        // Follow-up
+                        if let fu = record.followUp, !fu.isEmpty {
+                            detailSection("Seguimiento", icon: "calendar.badge.clock", content: fu)
+                        }
+
+                        // Prevention
+                        if let prev = record.prevention, !prev.isEmpty {
+                            detailSection("Prevención evaluada", icon: "shield.checkered", content: prev)
                         }
 
                         // Private Notes
@@ -402,7 +503,7 @@ struct MedicalRecordDetailView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Registro médico")
+            .navigationTitle("Historia Clínica")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -481,19 +582,31 @@ struct NewMedicalRecordView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    // Record type
+    @State private var recordType = "primera_consulta"
+    @State private var occupation = ""
+
     // Required
     @State private var chiefComplaint = ""
     @State private var diagnosis = ""
 
-    // Optional text
+    // Historia clínica fields
     @State private var presentIllness = ""
+    @State private var personalHistory = ""
+    @State private var familyHistory = ""
+    @State private var currentMedications = ""
+    @State private var allergiesText = ""
+    @State private var habits = ""
+    @State private var systemsReview = ""
+    @State private var otherSymptoms = ""
     @State private var physicalExam = ""
+    @State private var findings = ""
     @State private var diagnosisCode = ""
     @State private var treatmentPlan = ""
+    @State private var instructionsText = ""
     @State private var privateNotes = ""
 
     // Vital signs
-    @State private var showVitals = false
     @State private var bloodPressure = ""
     @State private var heartRate = ""
     @State private var temperature = ""
@@ -501,11 +614,17 @@ struct NewMedicalRecordView: View {
     @State private var spO2 = ""
     @State private var weight = ""
     @State private var height = ""
+    @State private var waistCircumference = ""
+    @State private var shoulderWidth = ""
 
     // Orders (comma separated)
     @State private var labOrders = ""
     @State private var imagingOrders = ""
     @State private var referrals = ""
+
+    // Follow-up & prevention
+    @State private var followUp = ""
+    @State private var prevention = ""
 
     // Secondary diagnoses
     @State private var secondaryDx = ""
@@ -516,6 +635,13 @@ struct NewMedicalRecordView: View {
     @State private var activeSection = 0
 
     private var isEditing: Bool { editing != nil }
+
+    private let recordTypes = [
+        ("primera_consulta", "Primera consulta"),
+        ("seguimiento", "Seguimiento"),
+        ("control", "Control"),
+        ("urgencia", "Urgencia"),
+    ]
 
     var body: some View {
         NavigationStack {
@@ -528,10 +654,12 @@ struct NewMedicalRecordView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 sectionChip("Consulta", section: 0, icon: "stethoscope")
-                                sectionChip("Signos vitales", section: 1, icon: "heart.fill")
-                                sectionChip("Diagnóstico", section: 2, icon: "cross.case.fill")
-                                sectionChip("Plan", section: 3, icon: "list.clipboard.fill")
-                                sectionChip("Notas", section: 4, icon: "lock.fill")
+                                sectionChip("Antecedentes", section: 1, icon: "clock.arrow.circlepath")
+                                sectionChip("Examen", section: 2, icon: "figure.stand")
+                                sectionChip("Diagnóstico", section: 3, icon: "cross.case.fill")
+                                sectionChip("Estudios", section: 4, icon: "flask.fill")
+                                sectionChip("Plan", section: 5, icon: "list.clipboard.fill")
+                                sectionChip("Notas", section: 6, icon: "lock.fill")
                             }
                             .padding(.horizontal, 4)
                         }
@@ -539,10 +667,12 @@ struct NewMedicalRecordView: View {
                         // Sections
                         switch activeSection {
                         case 0: consultaSection
-                        case 1: vitalsSection
-                        case 2: diagnosisSection
-                        case 3: planSection
-                        case 4: notesSection
+                        case 1: antecedentesSection
+                        case 2: examenSection
+                        case 3: diagnosisSection
+                        case 4: estudiosSection
+                        case 5: planSection
+                        case 6: notesSection
                         default: EmptyView()
                         }
 
@@ -575,7 +705,7 @@ struct NewMedicalRecordView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle(isEditing ? "Editar registro" : "Nueva consulta")
+            .navigationTitle(isEditing ? "Editar Historia Clínica" : "Historia Clínica")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -592,6 +722,43 @@ struct NewMedicalRecordView: View {
         VStack(alignment: .leading, spacing: 12) {
             MediSectionHeader(title: "Datos de la consulta", icon: "stethoscope")
 
+            // Tipo de consulta
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Tipo de consulta")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.mediTextSoft)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(recordTypes, id: \.0) { type in
+                            Button {
+                                recordType = type.0
+                            } label: {
+                                Text(type.1)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .foregroundStyle(recordType == type.0 ? .white : Color.mediTextSoft)
+                                    .background(recordType == type.0 ? Color.mediTeal : Color.mediSurface)
+                                    .clipShape(Capsule())
+                                    .overlay(Capsule().stroke(recordType == type.0 ? Color.clear : Color.mediBorder, lineWidth: 0.5))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+
+            // Ocupación
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ocupación")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.mediTextSoft)
+                TextField("Ej: Empleado, docente, jubilado...", text: $occupation)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 14))
+            }
+
+            // Motivo de consulta
             VStack(alignment: .leading, spacing: 6) {
                 Text("Motivo de consulta *")
                     .font(.system(size: 12, weight: .medium))
@@ -601,40 +768,38 @@ struct NewMedicalRecordView: View {
                     .font(.system(size: 14))
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Enfermedad actual")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mediTextSoft)
-                TextEditor(text: $presentIllness)
-                    .font(.system(size: 14))
-                    .frame(minHeight: 80)
-                    .scrollContentBackground(.hidden)
-                    .padding(8)
-                    .background(Color.mediSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Examen físico")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mediTextSoft)
-                TextEditor(text: $physicalExam)
-                    .font(.system(size: 14))
-                    .frame(minHeight: 80)
-                    .scrollContentBackground(.hidden)
-                    .padding(8)
-                    .background(Color.mediSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
-            }
+            // Enfermedad actual
+            hcTextArea("Enfermedad actual", text: $presentIllness)
         }
         .mediElevated()
     }
 
-    private var vitalsSection: some View {
+    private var antecedentesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MediSectionHeader(title: "Signos vitales", icon: "heart.fill")
+            MediSectionHeader(title: "Antecedentes", icon: "clock.arrow.circlepath")
+
+            hcTextArea("Antecedentes personales evaluados", text: $personalHistory)
+            hcTextArea("Antecedentes familiares", text: $familyHistory)
+            hcTextArea("Medicación habitual", text: $currentMedications)
+            hcTextArea("Alergias", text: $allergiesText)
+            hcTextArea("Hábitos evaluados", text: $habits, placeholder: "Tabaco, alcohol, ejercicio, dieta...")
+        }
+        .mediElevated()
+    }
+
+    private var examenSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            MediSectionHeader(title: "Examen físico y signos vitales", icon: "figure.stand")
+
+            hcTextArea("Revisión por sistemas", text: $systemsReview)
+            hcTextArea("Otros síntomas / negativos", text: $otherSymptoms)
+            hcTextArea("Examen físico evaluado", text: $physicalExam)
+
+            // Signos vitales inline
+            Text("Hallazgos y signos vitales")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.mediTextSoft)
+                .padding(.top, 4)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 vitalField("TA (mmHg)", placeholder: "120/80", text: $bloodPressure, icon: "drop.fill", color: .mediDanger)
@@ -644,7 +809,11 @@ struct NewMedicalRecordView: View {
                 vitalField("SpO₂ (%)", placeholder: "98", text: $spO2, icon: "waveform.path.ecg", color: .mediCyan, keyboard: .numberPad)
                 vitalField("Peso (kg)", placeholder: "70.0", text: $weight, icon: "scalemass.fill", color: .mediTextSoft, keyboard: .decimalPad)
                 vitalField("Talla (cm)", placeholder: "170", text: $height, icon: "ruler", color: .mediTextSoft, keyboard: .numberPad)
+                vitalField("Cintura (cm)", placeholder: "85", text: $waistCircumference, icon: "circle.dashed", color: .mediPrimary, keyboard: .decimalPad)
+                vitalField("Hombros (cm)", placeholder: "45", text: $shoulderWidth, icon: "figure.arms.open", color: .mediPrimary, keyboard: .decimalPad)
             }
+
+            hcTextArea("Hallazgos relevantes", text: $findings)
         }
         .mediElevated()
     }
@@ -689,23 +858,9 @@ struct NewMedicalRecordView: View {
         .mediElevated()
     }
 
-    private var planSection: some View {
+    private var estudiosSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MediSectionHeader(title: "Plan de tratamiento", icon: "list.clipboard.fill")
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Tratamiento")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mediTextSoft)
-                TextEditor(text: $treatmentPlan)
-                    .font(.system(size: 14))
-                    .frame(minHeight: 80)
-                    .scrollContentBackground(.hidden)
-                    .padding(8)
-                    .background(Color.mediSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
-            }
+            MediSectionHeader(title: "Estudios", icon: "flask.fill")
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Estudios de laboratorio (separar con coma)")
@@ -733,6 +888,18 @@ struct NewMedicalRecordView: View {
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 14))
             }
+        }
+        .mediElevated()
+    }
+
+    private var planSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            MediSectionHeader(title: "Indicaciones y seguimiento", icon: "list.clipboard.fill")
+
+            hcTextArea("Plan de tratamiento", text: $treatmentPlan)
+            hcTextArea("Indicaciones al paciente", text: $instructionsText)
+            hcTextArea("Seguimiento", text: $followUp, placeholder: "Próximo control, derivaciones pendientes...")
+            hcTextArea("Prevención evaluada", text: $prevention, placeholder: "Vacunas, screening, consejos...")
         }
         .mediElevated()
     }
@@ -789,6 +956,36 @@ struct NewMedicalRecordView: View {
     }
 
     @ViewBuilder
+    private func hcTextArea(_ label: String, text: Binding<String>, placeholder: String = "") -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.mediTextSoft)
+            TextEditor(text: text)
+                .font(.system(size: 14))
+                .frame(minHeight: 70)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(Color.mediSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    Group {
+                        if text.wrappedValue.isEmpty && !placeholder.isEmpty {
+                            Text(placeholder)
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.mediTextMuted)
+                                .padding(.leading, 12)
+                                .padding(.top, 16)
+                                .allowsHitTesting(false)
+                        }
+                    },
+                    alignment: .topLeading
+                )
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+        }
+    }
+
+    @ViewBuilder
     private func vitalField(_ label: String, placeholder: String, text: Binding<String>,
                             icon: String, color: Color, keyboard: UIKeyboardType = .default) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -812,12 +1009,25 @@ struct NewMedicalRecordView: View {
 
     private func populateIfEditing() {
         guard let r = editing else { return }
+        recordType = r.recordType ?? "consulta"
+        occupation = r.occupation ?? ""
         chiefComplaint = r.chiefComplaint
         diagnosis = r.diagnosis
         presentIllness = r.presentIllness ?? ""
+        personalHistory = r.personalHistory ?? ""
+        familyHistory = r.familyHistory ?? ""
+        currentMedications = r.currentMedications ?? ""
+        allergiesText = r.allergies ?? ""
+        habits = r.habits ?? ""
+        systemsReview = r.systemsReview ?? ""
+        otherSymptoms = r.otherSymptoms ?? ""
         physicalExam = r.physicalExam ?? ""
+        findings = r.findings ?? ""
         diagnosisCode = r.diagnosisCode ?? ""
         treatmentPlan = r.treatmentPlan ?? ""
+        instructionsText = r.instructions ?? ""
+        followUp = r.followUp ?? ""
+        prevention = r.prevention ?? ""
         privateNotes = r.privateNotes ?? ""
 
         if let vs = r.vitalSigns {
@@ -828,6 +1038,8 @@ struct NewMedicalRecordView: View {
             spO2 = vs.spO2.map { "\($0)" } ?? ""
             weight = vs.weight.map { String(format: "%.1f", $0) } ?? ""
             height = vs.height.map { String(format: "%.0f", $0) } ?? ""
+            waistCircumference = vs.waistCircumference.map { String(format: "%.0f", $0) } ?? ""
+            shoulderWidth = vs.shoulderWidth.map { String(format: "%.0f", $0) } ?? ""
         }
 
         labOrders = r.labOrders?.joined(separator: ", ") ?? ""
@@ -856,11 +1068,14 @@ struct NewMedicalRecordView: View {
             respiratoryRate: Int(respiratoryRate),
             spO2: Int(spO2),
             weight: Double(weight),
-            height: Double(height)
+            height: Double(height),
+            waistCircumference: Double(waistCircumference),
+            shoulderWidth: Double(shoulderWidth)
         )
 
         let hasVitals = vitals.bloodPressure != nil || vitals.heartRate != nil || vitals.temperature != nil
             || vitals.respiratoryRate != nil || vitals.spO2 != nil || vitals.weight != nil || vitals.height != nil
+            || vitals.waistCircumference != nil || vitals.shoulderWidth != nil
 
         let secondaryList: [SecondaryDiagnosisPayload]? = {
             let lines = secondaryDx.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
@@ -871,17 +1086,30 @@ struct NewMedicalRecordView: View {
         let payload = CreateRecordPayload(
             patientId: patientId,
             appointmentId: nil,
+            recordType: recordType,
             chiefComplaint: chiefComplaint,
             presentIllness: presentIllness.isEmpty ? nil : presentIllness,
+            personalHistory: personalHistory.isEmpty ? nil : personalHistory,
+            familyHistory: familyHistory.isEmpty ? nil : familyHistory,
+            currentMedications: currentMedications.isEmpty ? nil : currentMedications,
+            allergies: allergiesText.isEmpty ? nil : allergiesText,
+            habits: habits.isEmpty ? nil : habits,
+            systemsReview: systemsReview.isEmpty ? nil : systemsReview,
+            otherSymptoms: otherSymptoms.isEmpty ? nil : otherSymptoms,
             vitalSigns: hasVitals ? vitals : nil,
             physicalExam: physicalExam.isEmpty ? nil : physicalExam,
+            findings: findings.isEmpty ? nil : findings,
             diagnosis: diagnosis,
             diagnosisCode: diagnosisCode.isEmpty ? nil : diagnosisCode,
             secondaryDiagnoses: secondaryList,
             treatmentPlan: treatmentPlan.isEmpty ? nil : treatmentPlan,
+            instructions: instructionsText.isEmpty ? nil : instructionsText,
             labOrders: splitComma(labOrders),
             imagingOrders: splitComma(imagingOrders),
             referrals: splitComma(referrals),
+            followUp: followUp.isEmpty ? nil : followUp,
+            prevention: prevention.isEmpty ? nil : prevention,
+            occupation: occupation.isEmpty ? nil : occupation,
             privateNotes: privateNotes.isEmpty ? nil : privateNotes
         )
 
