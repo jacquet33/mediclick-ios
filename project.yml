@@ -37,5 +37,8 @@ targets:
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         CODE_SIGN_STYLE: Manual
         ENABLE_PREVIEWS: YES
+        INFOPLIST_KEY_UIBackgroundModes: remote-notification
+        INFOPLIST_KEY_NSCameraUsageDescription: "MediClick necesita acceso a la cámara para fotografiar exámenes y documentos médicos"
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "MediClick necesita acceso a tus fotos para adjuntar imágenes de exámenes médicos"
     entitlements:
       path: MediClick/MediClick.entitlements

@@ -41,10 +41,12 @@ final class PushManager: NSObject {
     func didRegisterForRemoteNotifications(deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
         self.deviceToken = token
+        // Persist to UserDefaults so it survives app restarts
+        UserDefaults.standard.set(token, forKey: "apns_device_token")
         print("📱 APNs Token received: \(token.prefix(20))...")
 
         // Enviar al backend
-        Task { await uploadToken(token) }
+        Task { @MainActor in await uploadToken(token) }
     }
     
     func didFailToRegisterForRemoteNotifications(error: Error) {
@@ -54,11 +56,13 @@ final class PushManager: NSObject {
     /// Subir token al backend — reintentar si doctor_id aún no está disponible
     @MainActor
     func uploadToken(_ token: String? = nil) async {
-        let tok = token ?? deviceToken
+        let tok = token ?? deviceToken ?? UserDefaults.standard.string(forKey: "apns_device_token")
         guard let tok else {
             print("⚠️ Push: no device token available yet")
             return
         }
+        // Keep in-memory reference current
+        if deviceToken == nil { deviceToken = tok }
 
         // Intentar obtener userId — si no está, reintentar hasta 5 veces con delay
         var userId: String?
@@ -110,12 +114,14 @@ final class PushManager: NSObject {
     
     /// Desregistrar al hacer logout
     func unregister() async {
-        guard deviceToken != nil else { return }
-        
+        guard let tok = deviceToken ?? UserDefaults.standard.string(forKey: "apns_device_token") else { return }
+
         struct UnregBody: Encodable { let token: String }
         do {
             struct OkResponse: Decodable { let ok: Bool }
-            let _: OkResponse = try await APIClient.shared.delete("/api/v1/push/unregister")
+            let _: OkResponse = try await APIClient.shared.post("/api/v1/push/unregister", body: UnregBody(token: tok))
+            UserDefaults.standard.removeObject(forKey: "apns_device_token")
+            deviceToken = nil
             print("✅ Push token unregistered")
         } catch {
             print("❌ Failed to unregister push token: \(error)")
