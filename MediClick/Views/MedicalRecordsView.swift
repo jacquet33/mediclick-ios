@@ -640,6 +640,14 @@ struct NewMedicalRecordView: View {
     @State private var cie10Results: [CIE10Code] = []
     @State private var showCIE10Results = false
 
+    // Examen físico checkboxes
+    @State private var selectedExamenItems: Set<String> = []
+    @State private var examenNotes: [String: String] = [:]  // id -> note text
+
+    // Revisión por sistemas checkboxes
+    @State private var selectedRevisionItems: Set<String> = []
+    @State private var revisionNotes: [String: String] = [:]  // id -> note text
+
     // State
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -855,15 +863,165 @@ struct NewMedicalRecordView: View {
     }
 
     private var examenSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            MediSectionHeader(title: "Examen físico y signos vitales", icon: "figure.stand")
+        VStack(alignment: .leading, spacing: 16) {
+            // 1) Revisión por sistemas (checkboxes)
+            revisionSistemasBlock
 
-            hcTextArea("Revisión por sistemas", text: $systemsReview)
-            hcTextArea("Otros síntomas / negativos", text: $otherSymptoms)
-            hcTextArea("Examen físico evaluado", text: $physicalExam)
+            // 2) Examen físico por aparatos (checkboxes)
+            examenFisicoBlock
 
-            // Signos vitales inline
-            Text("Hallazgos y signos vitales")
+            // 3) Signos vitales (numeric fields)
+            signosVitalesBlock
+
+            // 4) Hallazgos relevantes
+            hcTextArea("Hallazgos relevantes", text: $findings)
+        }
+        .mediElevated()
+    }
+
+    // MARK: - Revisión por sistemas checkboxes
+
+    private var revisionSistemasBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            MediSectionHeader(title: "Revisión por sistemas", icon: "list.bullet.clipboard")
+            revisionSistemasChips
+            hcTextArea("Otros síntomas / negativos", text: $otherSymptoms, placeholder: "Síntomas negativos relevantes...")
+        }
+    }
+
+    private var revisionSistemasChips: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(RevisionSistemasData.items) { item in
+                revisionSistemaRow(item)
+            }
+        }
+    }
+
+    private func revisionSistemaRow(_ item: RevisionSistemasItem) -> some View {
+        let isSelected = selectedRevisionItems.contains(item.id)
+        return VStack(alignment: .leading, spacing: 4) {
+            Button {
+                if selectedRevisionItems.contains(item.id) {
+                    selectedRevisionItems.remove(item.id)
+                    revisionNotes.removeValue(forKey: item.id)
+                } else {
+                    selectedRevisionItems.insert(item.id)
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 18))
+                        .foregroundStyle(isSelected ? Color.mediPrimary : Color.mediTextMuted)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.label)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.mediText)
+                        Text(item.symptoms)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.mediTextMuted)
+                    }
+
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(isSelected ? Color.mediPrimary.opacity(0.06) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+
+            if isSelected {
+                revisionNoteField(for: item.id, placeholder: "Detalles de \(item.label.lowercased())...")
+            }
+        }
+    }
+
+    private func revisionNoteField(for id: String, placeholder: String) -> some View {
+        let binding = Binding<String>(
+            get: { revisionNotes[id] ?? "" },
+            set: { revisionNotes[id] = $0 }
+        )
+        return TextField(placeholder, text: binding)
+            .font(.system(size: 13))
+            .padding(8)
+            .background(Color.mediSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.mediBorder, lineWidth: 0.5))
+            .padding(.leading, 34)
+    }
+
+    // MARK: - Examen físico checkboxes
+
+    private var examenFisicoBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            MediSectionHeader(title: "Examen físico por aparatos", icon: "figure.stand")
+            examenFisicoChips
+        }
+    }
+
+    private var examenFisicoChips: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(ExamenFisicoData.items) { item in
+                examenFisicoRow(item)
+            }
+        }
+    }
+
+    private func examenFisicoRow(_ item: ExamenFisicoItem) -> some View {
+        let isSelected = selectedExamenItems.contains(item.id)
+        return VStack(alignment: .leading, spacing: 4) {
+            Button {
+                if selectedExamenItems.contains(item.id) {
+                    selectedExamenItems.remove(item.id)
+                    examenNotes.removeValue(forKey: item.id)
+                } else {
+                    selectedExamenItems.insert(item.id)
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 18))
+                        .foregroundStyle(isSelected ? Color.mediTeal : Color.mediTextMuted)
+
+                    Text(item.label)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.mediText)
+
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(isSelected ? Color.mediTeal.opacity(0.06) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+
+            if isSelected {
+                examenNoteField(for: item.id, placeholder: "Hallazgos en \(item.label.lowercased())...")
+            }
+        }
+    }
+
+    private func examenNoteField(for id: String, placeholder: String) -> some View {
+        let binding = Binding<String>(
+            get: { examenNotes[id] ?? "" },
+            set: { examenNotes[id] = $0 }
+        )
+        return TextField(placeholder, text: binding)
+            .font(.system(size: 13))
+            .padding(8)
+            .background(Color.mediSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.mediBorder, lineWidth: 0.5))
+            .padding(.leading, 34)
+    }
+
+    // MARK: - Signos vitales
+
+    private var signosVitalesBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Signos vitales")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.mediTextSoft)
                 .padding(.top, 4)
@@ -879,10 +1037,7 @@ struct NewMedicalRecordView: View {
                 vitalField("Cintura (cm)", placeholder: "85", text: $waistCircumference, icon: "circle.dashed", color: .mediPrimary, keyboard: .decimalPad)
                 vitalField("Hombros (cm)", placeholder: "45", text: $shoulderWidth, icon: "figure.arms.open", color: .mediPrimary, keyboard: .decimalPad)
             }
-
-            hcTextArea("Hallazgos relevantes", text: $findings)
         }
-        .mediElevated()
     }
 
     private var diagnosisSection: some View {
@@ -1199,9 +1354,26 @@ struct NewMedicalRecordView: View {
         currentMedications = r.currentMedications ?? ""
         allergiesText = r.allergies ?? ""
         habits = r.habits ?? ""
+
+        // Parse revisión por sistemas checkboxes
+        let (parsedRevisionItems, parsedRevisionNotes, parsedOtherSymptoms) = parseCheckboxes(
+            r.systemsReview ?? "",
+            allItems: RevisionSistemasData.items.map { ($0.id, $0.label) }
+        )
+        selectedRevisionItems = parsedRevisionItems
+        revisionNotes = parsedRevisionNotes
         systemsReview = r.systemsReview ?? ""
-        otherSymptoms = r.otherSymptoms ?? ""
+        otherSymptoms = parsedOtherSymptoms.isEmpty ? (r.otherSymptoms ?? "") : parsedOtherSymptoms
+
+        // Parse examen físico checkboxes
+        let (parsedExamenItems, parsedExamenNotes, _) = parseCheckboxes(
+            r.physicalExam ?? "",
+            allItems: ExamenFisicoData.items.map { ($0.id, $0.label) }
+        )
+        selectedExamenItems = parsedExamenItems
+        examenNotes = parsedExamenNotes
         physicalExam = r.physicalExam ?? ""
+
         findings = r.findings ?? ""
         diagnosisCode = r.diagnosisCode ?? ""
         treatmentPlan = r.treatmentPlan ?? ""
@@ -1271,6 +1443,22 @@ struct NewMedicalRecordView: View {
             chips: selectedFamilyChips, extra: familyHistoryExtra
         )
 
+        // Combine revisión por sistemas checkboxes into text
+        let combinedSystemsReview = combineCheckboxes(
+            selected: selectedRevisionItems,
+            notes: revisionNotes,
+            allItems: RevisionSistemasData.items.map { ($0.id, $0.label) },
+            extraText: otherSymptoms
+        )
+
+        // Combine examen físico checkboxes into text
+        let combinedPhysicalExam = combineCheckboxes(
+            selected: selectedExamenItems,
+            notes: examenNotes,
+            allItems: ExamenFisicoData.items.map { ($0.id, $0.label) },
+            extraText: physicalExam
+        )
+
         let payload = CreateRecordPayload(
             patientId: patientId,
             appointmentId: nil,
@@ -1282,10 +1470,10 @@ struct NewMedicalRecordView: View {
             currentMedications: currentMedications.isEmpty ? nil : currentMedications,
             allergies: allergiesText.isEmpty ? nil : allergiesText,
             habits: habits.isEmpty ? nil : habits,
-            systemsReview: systemsReview.isEmpty ? nil : systemsReview,
+            systemsReview: combinedSystemsReview,
             otherSymptoms: otherSymptoms.isEmpty ? nil : otherSymptoms,
             vitalSigns: hasVitals ? vitals : nil,
-            physicalExam: physicalExam.isEmpty ? nil : physicalExam,
+            physicalExam: combinedPhysicalExam,
             findings: findings.isEmpty ? nil : findings,
             diagnosis: diagnosis,
             diagnosisCode: diagnosisCode.isEmpty ? nil : diagnosisCode,
@@ -1340,6 +1528,63 @@ struct NewMedicalRecordView: View {
         }
         let result = parts.joined(separator: ". ")
         return result.isEmpty ? nil : result
+    }
+
+    // MARK: - Checkbox Helpers (Examen / Revisión)
+
+    private func combineCheckboxes(
+        selected: Set<String>,
+        notes: [String: String],
+        allItems: [(id: String, label: String)],
+        extraText: String
+    ) -> String? {
+        var parts: [String] = []
+        for item in allItems where selected.contains(item.id) {
+            let note = notes[item.id]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if note.isEmpty {
+                parts.append("[\(item.label)]: evaluado")
+            } else {
+                parts.append("[\(item.label)]: \(note)")
+            }
+        }
+        let trimmedExtra = extraText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedExtra.isEmpty {
+            parts.append(trimmedExtra)
+        }
+        let result = parts.joined(separator: "; ")
+        return result.isEmpty ? nil : result
+    }
+
+    private func parseCheckboxes(
+        _ text: String,
+        allItems: [(id: String, label: String)]
+    ) -> (Set<String>, [String: String], String) {
+        guard !text.isEmpty else { return ([], [:], "") }
+        var found: Set<String> = []
+        var notes: [String: String] = [:]
+        var remaining = text
+
+        for item in allItems {
+            let pattern = "[\(item.label)]:"
+            if let range = remaining.range(of: pattern, options: .caseInsensitive) {
+                found.insert(item.id)
+                // Extract note after the label until next "[" or ";"
+                let afterLabel = remaining[range.upperBound...]
+                let noteEnd = afterLabel.firstIndex(where: { $0 == ";" }) ?? afterLabel.endIndex
+                let note = String(afterLabel[..<noteEnd]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if note != "evaluado" && !note.isEmpty {
+                    notes[item.id] = note
+                }
+                // Remove this segment from remaining
+                let segEnd = noteEnd < afterLabel.endIndex
+                    ? remaining.index(after: noteEnd) : noteEnd
+                remaining.removeSubrange(range.lowerBound..<segEnd)
+            }
+        }
+
+        remaining = remaining
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ";,")))
+        return (found, notes, remaining)
     }
 
     private func parseAntecedentes(_ text: String, knownConditions: [String]) -> (Set<String>, String) {
