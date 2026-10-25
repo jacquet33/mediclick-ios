@@ -629,6 +629,17 @@ struct NewMedicalRecordView: View {
     // Secondary diagnoses
     @State private var secondaryDx = ""
 
+    // Antecedentes chips
+    @State private var selectedPersonalChips: Set<String> = []
+    @State private var selectedFamilyChips: Set<String> = []
+    @State private var personalHistoryExtra = ""
+    @State private var familyHistoryExtra = ""
+
+    // CIE-10 search
+    @State private var cie10SearchText = ""
+    @State private var cie10Results: [CIE10Code] = []
+    @State private var showCIE10Results = false
+
     // State
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -775,16 +786,72 @@ struct NewMedicalRecordView: View {
     }
 
     private var antecedentesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             MediSectionHeader(title: "Antecedentes", icon: "clock.arrow.circlepath")
 
-            hcTextArea("Antecedentes personales evaluados", text: $personalHistory)
-            hcTextArea("Antecedentes familiares", text: $familyHistory)
+            antecedentesPersonalesChips
+            antecedentesPersonalesExtra
+            antecedentesFamiliaresChips
+            antecedentesFamiliaresExtra
             hcTextArea("Medicación habitual", text: $currentMedications)
             hcTextArea("Alergias", text: $allergiesText)
             hcTextArea("Hábitos evaluados", text: $habits, placeholder: "Tabaco, alcohol, ejercicio, dieta...")
         }
         .mediElevated()
+    }
+
+    private var antecedentesPersonalesChips: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Antecedentes personales")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.mediTextSoft)
+
+            FlowLayout(spacing: 8) {
+                ForEach(AntecedentesComunes.personales, id: \.self) { condition in
+                    ChipToggle(
+                        title: condition,
+                        isSelected: selectedPersonalChips.contains(condition)
+                    ) {
+                        if selectedPersonalChips.contains(condition) {
+                            selectedPersonalChips.remove(condition)
+                        } else {
+                            selectedPersonalChips.insert(condition)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var antecedentesPersonalesExtra: some View {
+        hcTextArea("Otros antecedentes personales", text: $personalHistoryExtra, placeholder: "Detalles adicionales...")
+    }
+
+    private var antecedentesFamiliaresChips: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Antecedentes familiares")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.mediTextSoft)
+
+            FlowLayout(spacing: 8) {
+                ForEach(AntecedentesComunes.familiares, id: \.self) { condition in
+                    ChipToggle(
+                        title: condition,
+                        isSelected: selectedFamilyChips.contains(condition)
+                    ) {
+                        if selectedFamilyChips.contains(condition) {
+                            selectedFamilyChips.remove(condition)
+                        } else {
+                            selectedFamilyChips.insert(condition)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var antecedentesFamiliaresExtra: some View {
+        hcTextArea("Otros antecedentes familiares", text: $familyHistoryExtra, placeholder: "Detalles adicionales...")
     }
 
     private var examenSection: some View {
@@ -822,40 +889,140 @@ struct NewMedicalRecordView: View {
         VStack(alignment: .leading, spacing: 12) {
             MediSectionHeader(title: "Diagnóstico", icon: "cross.case.fill")
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Diagnóstico principal *")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mediTextSoft)
-                TextField("Ej: Gastritis aguda", text: $diagnosis)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 14))
-            }
+            diagnosisPrincipal
+            diagnosisCIE10Search
+            diagnosisSecondary
+        }
+        .mediElevated()
+    }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Código CIE-10")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mediTextSoft)
-                TextField("Ej: K29.0", text: $diagnosisCode)
+    private var diagnosisPrincipal: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Diagnóstico principal *")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.mediTextSoft)
+            TextField("Ej: Gastritis aguda", text: $diagnosis)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 14))
+        }
+    }
+
+    private var diagnosisCIE10Search: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Código CIE-10")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.mediTextSoft)
+
+            HStack(spacing: 8) {
+                TextField("Buscar código o diagnóstico...", text: $cie10SearchText)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 14))
                     .autocapitalization(.allCharacters)
+                    .onChange(of: cie10SearchText) {
+                        let results = CIE10Database.search(cie10SearchText)
+                        cie10Results = Array(results.prefix(8))
+                        showCIE10Results = !cie10Results.isEmpty && cie10SearchText.count >= 2
+                    }
+
+                if !diagnosisCode.isEmpty {
+                    cie10SelectedBadge
+                }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Diagnósticos secundarios (uno por línea)")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mediTextSoft)
-                TextEditor(text: $secondaryDx)
-                    .font(.system(size: 14))
-                    .frame(minHeight: 60)
-                    .scrollContentBackground(.hidden)
-                    .padding(8)
-                    .background(Color.mediSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+            if showCIE10Results {
+                cie10ResultsList
+            }
+
+            if !diagnosisCode.isEmpty {
+                cie10SelectedRow
             }
         }
-        .mediElevated()
+    }
+
+    private var cie10SelectedBadge: some View {
+        Text(diagnosisCode)
+            .font(.system(size: 12, weight: .bold, design: .monospaced))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.mediPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var cie10ResultsList: some View {
+        VStack(spacing: 0) {
+            ForEach(cie10Results) { code in
+                Button {
+                    diagnosisCode = code.id
+                    if diagnosis.isEmpty {
+                        diagnosis = code.description
+                    }
+                    cie10SearchText = ""
+                    showCIE10Results = false
+                } label: {
+                    cie10ResultRow(code)
+                }
+            }
+        }
+        .background(Color.mediSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+    }
+
+    private func cie10ResultRow(_ code: CIE10Code) -> some View {
+        HStack {
+            Text(code.id)
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.mediPrimary)
+                .frame(width: 60, alignment: .leading)
+            Text(code.description)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.mediText)
+                .lineLimit(1)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    private var cie10SelectedRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.mediSuccess)
+            let matchingCode = CIE10Database.allCodes.first { $0.id == diagnosisCode }
+            let label = matchingCode?.displayText ?? diagnosisCode
+            Text(label)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.mediText)
+            Spacer()
+            Button {
+                diagnosisCode = ""
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.mediTextMuted)
+            }
+        }
+        .padding(10)
+        .background(Color.mediSuccess.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var diagnosisSecondary: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Diagnósticos secundarios (uno por línea)")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.mediTextSoft)
+            TextEditor(text: $secondaryDx)
+                .font(.system(size: 14))
+                .frame(minHeight: 60)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(Color.mediSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+        }
     }
 
     private var estudiosSection: some View {
@@ -1014,7 +1181,20 @@ struct NewMedicalRecordView: View {
         chiefComplaint = r.chiefComplaint
         diagnosis = r.diagnosis
         presentIllness = r.presentIllness ?? ""
+        // Parse personal history: match chips, rest goes to extra text
+        let (parsedPersonalChips, parsedPersonalExtra) = parseAntecedentes(
+            r.personalHistory ?? "", knownConditions: AntecedentesComunes.personales
+        )
+        selectedPersonalChips = parsedPersonalChips
+        personalHistoryExtra = parsedPersonalExtra
         personalHistory = r.personalHistory ?? ""
+
+        // Parse family history the same way
+        let (parsedFamilyChips, parsedFamilyExtra) = parseAntecedentes(
+            r.familyHistory ?? "", knownConditions: AntecedentesComunes.familiares
+        )
+        selectedFamilyChips = parsedFamilyChips
+        familyHistoryExtra = parsedFamilyExtra
         familyHistory = r.familyHistory ?? ""
         currentMedications = r.currentMedications ?? ""
         allergiesText = r.allergies ?? ""
@@ -1083,14 +1263,22 @@ struct NewMedicalRecordView: View {
             return lines.map { SecondaryDiagnosisPayload(diagnosis: $0, code: nil) }
         }()
 
+        // Combine chips + extra text for antecedentes
+        let combinedPersonalHistory = combineAntecedentes(
+            chips: selectedPersonalChips, extra: personalHistoryExtra
+        )
+        let combinedFamilyHistory = combineAntecedentes(
+            chips: selectedFamilyChips, extra: familyHistoryExtra
+        )
+
         let payload = CreateRecordPayload(
             patientId: patientId,
             appointmentId: nil,
             recordType: recordType,
             chiefComplaint: chiefComplaint,
             presentIllness: presentIllness.isEmpty ? nil : presentIllness,
-            personalHistory: personalHistory.isEmpty ? nil : personalHistory,
-            familyHistory: familyHistory.isEmpty ? nil : familyHistory,
+            personalHistory: combinedPersonalHistory,
+            familyHistory: combinedFamilyHistory,
             currentMedications: currentMedications.isEmpty ? nil : currentMedications,
             allergies: allergiesText.isEmpty ? nil : allergiesText,
             habits: habits.isEmpty ? nil : habits,
@@ -1136,5 +1324,120 @@ struct NewMedicalRecordView: View {
                 isSaving = false
             }
         }
+    }
+
+    // MARK: - Antecedentes Helpers
+
+    private func combineAntecedentes(chips: Set<String>, extra: String) -> String? {
+        var parts: [String] = []
+        let orderedChips = chips.sorted()
+        if !orderedChips.isEmpty {
+            parts.append(orderedChips.joined(separator: ", "))
+        }
+        let trimmed = extra.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            parts.append(trimmed)
+        }
+        let result = parts.joined(separator: ". ")
+        return result.isEmpty ? nil : result
+    }
+
+    private func parseAntecedentes(_ text: String, knownConditions: [String]) -> (Set<String>, String) {
+        guard !text.isEmpty else { return ([], "") }
+        var found: Set<String> = []
+        let lower = text.lowercased()
+        for condition in knownConditions {
+            if lower.contains(condition.lowercased()) {
+                found.insert(condition)
+            }
+        }
+        var remaining = text
+        for condition in found {
+            remaining = remaining.replacingOccurrences(
+                of: condition, with: "", options: .caseInsensitive
+            )
+        }
+        remaining = remaining.replacingOccurrences(of: ", ,", with: ",")
+            .replacingOccurrences(of: ". .", with: ".")
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ",.")))
+        while remaining.contains("  ") {
+            remaining = remaining.replacingOccurrences(of: "  ", with: " ")
+        }
+        return (found, remaining)
+    }
+}
+
+// MARK: - ChipToggle
+
+struct ChipToggle: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? .white : Color.mediText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(isSelected ? Color.mediPrimary : Color.mediSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(isSelected ? Color.clear : Color.mediBorder, lineWidth: 0.5)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - FlowLayout (wrapping horizontal layout for chips)
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = arrangeSubviews(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = arrangeSubviews(
+            proposal: ProposedViewSize(width: bounds.width, height: bounds.height),
+            subviews: subviews
+        )
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: .unspecified
+            )
+        }
+    }
+
+    private func arrangeSubviews(proposal: ProposedViewSize, subviews: Subviews)
+        -> (size: CGSize, positions: [CGPoint])
+    {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        var maxX: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth, currentX > 0 {
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+            positions.append(CGPoint(x: currentX, y: currentY))
+            lineHeight = max(lineHeight, size.height)
+            currentX += size.width + spacing
+            maxX = max(maxX, currentX - spacing)
+        }
+
+        return (CGSize(width: maxX, height: currentY + lineHeight), positions)
     }
 }
