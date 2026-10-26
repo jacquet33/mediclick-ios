@@ -71,6 +71,7 @@ final class LocalPatient: Syncable {
     
     var doctorId: UUID
     var dni: String?
+    var cuil: String?
     var firstName: String
     var lastName: String
     var email: String?
@@ -274,11 +275,14 @@ final class LocalPrescriptionItem {
     var prescription: LocalPrescription?
     
     var medicationName: String
+    var genericName: String?        // DCI — Ley 25.649
     var dosage: String              // "10mg"
     var frequency: String           // "1 comp cada 12hs"
     var duration: String?           // "30 días"
     var quantity: Int?
     var instructions: String?
+    var pharmaceuticalForm: String? // "Comprimido", "Cápsula", etc.
+    var presentation: String?       // "Blister x 20"
     var sortOrder: Int
     
     init(prescription: LocalPrescription, medicationName: String, dosage: String, frequency: String) {

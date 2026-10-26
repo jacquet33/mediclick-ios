@@ -229,7 +229,49 @@ struct PatientDetailView: View {
         }
         .navigationTitle("Historia clínica")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await downloadHCPdf() }
+                } label: {
+                    Label("Exportar HC", systemImage: "arrow.down.doc.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.mediTeal)
+                }
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = pdfShareItem {
+                ShareSheet(items: [url])
+            }
+        }
         .task { await loadHistory() }
+    }
+
+    @State private var isDownloadingPdf = false
+    @State private var pdfShareItem: URL?
+    @State private var showShareSheet = false
+
+    private func downloadHCPdf() async {
+        guard !isDownloadingPdf else { return }
+        await MainActor.run { isDownloadingPdf = true }
+
+        let patientId = patient.remoteId?.uuidString ?? patient.id.uuidString
+        do {
+            let data = try await APIClient.shared.download("/api/v1/medical-records/patient/\(patientId)/pdf")
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("HC_\(patient.fullName.replacingOccurrences(of: " ", with: "_")).pdf")
+            try data.write(to: url)
+            await MainActor.run {
+                isDownloadingPdf = false
+                pdfShareItem = url
+                showShareSheet = true
+            }
+        } catch {
+            await MainActor.run {
+                isDownloadingPdf = false
+            }
+            print("❌ Error downloading HC PDF: \(error)")
+        }
     }
     
     // MARK: - Timeline
@@ -526,6 +568,7 @@ struct NewPatientView: View {
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var dni = ""
+    @State private var cuil = ""
     @State private var phone = ""
     @State private var email = ""
     @State private var dateOfBirth = Date()
@@ -547,6 +590,7 @@ struct NewPatientView: View {
                         TextField("Nombre *", text: $firstName)
                         TextField("Apellido *", text: $lastName)
                         TextField("DNI", text: $dni).keyboardType(.numberPad)
+                        TextField("CUIL (XX-XXXXXXXX-X)", text: $cuil).keyboardType(.numberPad)
                         TextField("Teléfono", text: $phone).keyboardType(.phonePad)
                         TextField("Email", text: $email).keyboardType(.emailAddress).autocapitalization(.none)
                         DatePicker("Nacimiento", selection: $dateOfBirth, displayedComponents: .date)
@@ -604,6 +648,7 @@ struct NewPatientView: View {
                 let firstName: String
                 let lastName: String
                 let dni: String?
+                let cuil: String?
                 let phone: String?
                 let email: String?
                 let dateOfBirth: String?
@@ -625,6 +670,7 @@ struct NewPatientView: View {
             let req = CreatePatientReq(
                 firstName: firstName, lastName: lastName,
                 dni: dni.isEmpty ? nil : dni,
+                cuil: cuil.isEmpty ? nil : cuil,
                 phone: phone.isEmpty ? nil : phone,
                 email: email.isEmpty ? nil : email,
                 dateOfBirth: f.string(from: dateOfBirth),
@@ -642,6 +688,7 @@ struct NewPatientView: View {
                     let patient = LocalPatient(doctorId: UUID(), firstName: firstName, lastName: lastName)
                     patient.remoteId = UUID(uuidString: resp.id)
                     patient.dni = dni.isEmpty ? nil : dni
+                    patient.cuil = cuil.isEmpty ? nil : cuil
                     patient.phone = phone.isEmpty ? nil : phone
                     patient.email = email.isEmpty ? nil : email
                     patient.dateOfBirth = dateOfBirth

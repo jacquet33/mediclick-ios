@@ -510,12 +510,15 @@ struct NewPrescriptionView: View {
     struct MedItem: Identifiable {
         let id = UUID()
         var name = ""
+        var genericName = ""
         var amount = ""
         var unit = "mg"
         var frequency = "Cada 8 horas"
         var duration = "7 días"
         var customFrequency = ""
         var customDuration = ""
+        var pharmaceuticalForm = ""
+        var presentation = ""
     }
     
     struct RxTemplate: Decodable, Identifiable {
@@ -545,6 +548,11 @@ struct NewPrescriptionView: View {
                               "Según necesidad", "Otro"]
     static let durations = ["3 días", "5 días", "7 días", "10 días", "14 días", "21 días",
                             "30 días", "60 días", "90 días", "Uso continuo", "Otro"]
+    static let pharmaForms = ["Comprimido", "Comprimido recubierto", "Cápsula", "Gragea",
+                              "Jarabe", "Suspensión", "Solución", "Gotas",
+                              "Crema", "Pomada", "Gel", "Ungüento",
+                              "Inyectable", "Ampolla", "Supositorio", "Óvulo",
+                              "Aerosol", "Inhalador", "Parche", "Sobre"]
     
     var body: some View {
         NavigationStack {
@@ -733,6 +741,65 @@ struct NewPrescriptionView: View {
                                 if med.duration == "Otro" {
                                     MediTextField(icon: "calendar", placeholder: "Duración personalizada", text: $med.customDuration)
                                 }
+
+                                // Nombre genérico (DCI) — Ley 25.649
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("NOMBRE GENÉRICO (DCI)")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.mediTextMuted)
+                                        .tracking(0.3)
+                                    TextField("Ej: Ibuprofeno", text: $med.genericName)
+                                        .font(.system(size: 15))
+                                        .padding(14)
+                                        .background(Color.mediBgSoft)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                                }
+
+                                HStack(spacing: 12) {
+                                    // Forma farmacéutica
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("FORMA FARM.")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(Color.mediTextMuted)
+                                            .tracking(0.3)
+                                        Menu {
+                                            ForEach(Self.pharmaForms, id: \.self) { form in
+                                                Button(form) { med.pharmaceuticalForm = form }
+                                            }
+                                        } label: {
+                                            HStack {
+                                                Text(med.pharmaceuticalForm.isEmpty ? "Seleccionar" : med.pharmaceuticalForm)
+                                                    .font(.system(size: 15))
+                                                    .foregroundStyle(med.pharmaceuticalForm.isEmpty ? Color.mediTextMuted : Color.mediText)
+                                                Spacer()
+                                                Image(systemName: "chevron.down")
+                                                    .font(.system(size: 10))
+                                                    .foregroundStyle(Color.mediTextMuted)
+                                            }
+                                            .padding(14)
+                                            .background(Color.mediBgSoft)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+
+                                    // Presentación
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("PRESENTACIÓN")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(Color.mediTextMuted)
+                                            .tracking(0.3)
+                                        TextField("Ej: Blister x 20", text: $med.presentation)
+                                            .font(.system(size: 15))
+                                            .padding(14)
+                                            .background(Color.mediBgSoft)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
                             }
                             .mediElevated()
                         }
@@ -836,6 +903,9 @@ struct NewPrescriptionView: View {
             let durStr = med.duration == "Otro" ? med.customDuration : med.duration
             let item = LocalPrescriptionItem(prescription: rx, medicationName: med.name, dosage: dosageStr, frequency: freqStr)
             item.duration = durStr.isEmpty ? nil : durStr
+            item.genericName = med.genericName.isEmpty ? nil : med.genericName
+            item.pharmaceuticalForm = med.pharmaceuticalForm.isEmpty ? nil : med.pharmaceuticalForm
+            item.presentation = med.presentation.isEmpty ? nil : med.presentation
             modelContext.insert(item)
             localItems.append(item)
         }
@@ -857,10 +927,13 @@ struct NewPrescriptionView: View {
         }
         struct CreateRxItem: Encodable {
             let medicationName: String
+            let genericName: String?
             let dosage: String?
             let frequency: String?
             let duration: String?
             let quantity: Int?
+            let pharmaceuticalForm: String?
+            let presentation: String?
         }
         struct CreateRxResponse: Decodable {
             let id: String
@@ -878,10 +951,13 @@ struct NewPrescriptionView: View {
             items: items.map { item in
                 CreateRxItem(
                     medicationName: item.medicationName,
+                    genericName: item.genericName,
                     dosage: item.dosage,
                     frequency: item.frequency,
                     duration: item.duration,
-                    quantity: nil
+                    quantity: nil,
+                    pharmaceuticalForm: item.pharmaceuticalForm,
+                    presentation: item.presentation
                 )
             }
         )
