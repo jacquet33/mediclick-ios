@@ -814,7 +814,7 @@ struct NewMedicalRecordView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.mediTextSoft)
 
-            FlowLayout(spacing: 8) {
+            ChipFlowLayout(spacing: 8) {
                 ForEach(AntecedentesComunes.personales, id: \.self) { condition in
                     ChipToggle(
                         title: condition,
@@ -841,7 +841,7 @@ struct NewMedicalRecordView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.mediTextSoft)
 
-            FlowLayout(spacing: 8) {
+            ChipFlowLayout(spacing: 8) {
                 ForEach(AntecedentesComunes.familiares, id: \.self) { condition in
                     ChipToggle(
                         title: condition,
@@ -1637,9 +1637,9 @@ struct ChipToggle: View {
     }
 }
 
-// MARK: - FlowLayout (wrapping horizontal layout for chips)
+// MARK: - ChipFlowLayout (wrapping horizontal layout for chips)
 
-struct FlowLayout: Layout {
+struct ChipFlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

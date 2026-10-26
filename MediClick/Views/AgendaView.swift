@@ -219,7 +219,6 @@ struct AgendaView: View {
         let existingLocal = appointments.filter {
             calendar.isDate($0.date, inSameDayAs: date) && $0.remoteId != nil
         }
-        let existingRemoteIds = Set(existingLocal.compactMap { $0.remoteId })
 
         for sAppt in serverAppts {
             guard let remoteUUID = UUID(uuidString: sAppt.id) else { continue }
@@ -501,7 +500,7 @@ struct AgendaView: View {
         else { return [] }
         
         // Calcular offset: cuántos días en blanco antes del día 1
-        var weekday = calendar.component(.weekday, from: firstDay)
+        let weekday = calendar.component(.weekday, from: firstDay)
         // Ajustar para que lunes = 0
         let firstWeekday = calendar.firstWeekday
         let offset = (weekday - firstWeekday + 7) % 7

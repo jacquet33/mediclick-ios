@@ -73,7 +73,7 @@ final class AuthManager {
             KeychainHelper.save(key: "refresh_token", value: refreshToken)
         }
         
-        var orgs: [OrgInfo] = []
+        let orgs: [OrgInfo]
         if let orgArray = json?["organizations"] as? [[String: Any]] {
             orgs = orgArray.compactMap { o in
                 guard let id = (o["org_id"] as? String) ?? (o["orgId"] as? String),
@@ -87,8 +87,10 @@ final class AuthManager {
                     role: (o["role"] as? String) ?? "doctor"
                 )
             }
+        } else {
+            orgs = []
         }
-        
+
         let doc = json?["doctor"] as? [String: Any]
         let dId = doc?["id"] as? String ?? ""
         let fName = (doc?["first_name"] as? String) ?? (doc?["firstName"] as? String) ?? ""
