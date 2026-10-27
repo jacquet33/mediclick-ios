@@ -76,7 +76,7 @@ enum WhatsAppHelper {
         if !doctorName.isEmpty {
             msg += " con \(doctorName)"
         }
-        msg += ". ¿Confirma su asistencia? MediClick"
+        msg += ". ¿Confirma su asistencia? TuConsultorioOnline"
         return msg
     }
 }

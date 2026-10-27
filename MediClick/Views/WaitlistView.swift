@@ -314,7 +314,7 @@ struct WaitlistEntryCard: View {
                             let name = entry.patientName ?? "paciente"
                             WhatsAppHelper.open(
                                 phone: phone,
-                                message: "Hola \(name), se liberó un turno disponible. ¿Le interesa tomarlo? MediClick"
+                                message: "Hola \(name), se liberó un turno disponible. ¿Le interesa tomarlo? TuConsultorioOnline"
                             )
                         } label: {
                             Label("WA", systemImage: "message.fill")
