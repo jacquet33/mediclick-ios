@@ -120,6 +120,89 @@ final class AuthManager {
         }
     }
     
+
+    // MARK: - Alta de médico (igual que medicos.rispy.io)
+
+    struct RefepsCheck: Decodable {
+        let consultado: Bool
+        let encontrado: Bool
+        let esMedico: Bool
+        let matriculaVigente: Bool
+    }
+
+    struct RegistroMedico {
+        var prefijo: String            // "Dr." | "Dra."
+        var nombre: String
+        var apellido: String
+        var dni: String
+        var email: String
+        var celular: String
+        var password: String
+        var tipoMatricula: String      // "MP" | "MN"
+        var provincia: String
+        var matricula: String
+        var especialidad: String
+        var fotoDni: Data?             // JPEG
+        var fotoCredencial: Data?      // JPEG (opcional)
+    }
+
+    /// ¿El DNI figura como médico en REFEPS (SISA)? nil si no se pudo consultar
+    func consultarRefeps(dni: String) async -> RefepsCheck? {
+        let d = dni.filter(\.isNumber)
+        guard d.count >= 7, var comps = URLComponents(string: "\(APIConfig.baseURL)/api/v1/verification/refeps") else { return nil }
+        comps.queryItems = [URLQueryItem(name: "dni", value: d)]
+        guard let url = comps.url, let res = try? await URLSession.shared.data(from: url),
+              (res.1 as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return try? JSONDecoder().decode(RefepsCheck.self, from: res.0)
+    }
+
+    /// Crea la cuenta, envía DNI + matrícula para verificar y deja la sesión iniciada. Devuelve un error legible o nil.
+    func registrarMedico(_ r: RegistroMedico) async -> String? {
+        await MainActor.run { isLoading = true; errorMessage = nil }
+        defer { Task { @MainActor in self.isLoading = false } }
+        func post(_ path: String, _ body: [String: Any], method: String = "POST", token: String? = nil, org: String? = nil) async throws -> (Int, [String: Any]?) {
+            var req = URLRequest(url: URL(string: "\(APIConfig.baseURL)\(path)")!)
+            req.httpMethod = method
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+            if let org { req.setValue(org, forHTTPHeaderField: "x-organization-id") }
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            return ((resp as? HTTPURLResponse)?.statusCode ?? 0, try? JSONSerialization.jsonObject(with: data) as? [String: Any])
+        }
+        func mensaje(_ j: [String: Any]?) -> String {
+            if let m = j?["message"] as? String { return m }
+            if let l = j?["message"] as? [String] { return l.joined(separator: ", ") }
+            if let e = j?["errors"] as? [String] { return e.joined(separator: ", ") }
+            return "No se pudo crear la cuenta. Intentá de nuevo."
+        }
+        do {
+            let telefono = r.celular.filter(\.isNumber)
+            let (st, json) = try await post("/api/v1/auth/register", [
+                "email": r.email.trimmingCharacters(in: .whitespaces).lowercased(), "password": r.password,
+                "firstName": r.nombre.trimmingCharacters(in: .whitespaces), "lastName": r.apellido.trimmingCharacters(in: .whitespaces),
+                "phone": telefono.isEmpty ? "" : "+54" + telefono, "medicalLicense": r.matricula.trimmingCharacters(in: .whitespaces),
+                "specialty": r.especialidad,
+            ])
+            guard st == 200 || st == 201, let token = json?["accessToken"] as? String else { return mensaje(json) }
+            let org = ((json?["organizations"] as? [[String: Any]])?.first?["org_id"] as? String)
+            var verif: [String: Any] = [
+                "dni": r.dni.filter(\.isNumber), "licenseType": r.tipoMatricula, "medicalLicense": r.matricula,
+                "specialty": r.especialidad,
+            ]
+            if r.tipoMatricula == "MP" { verif["province"] = r.provincia }
+            if let f = r.fotoDni { verif["dniDocument"] = "data:image/jpeg;base64," + f.base64EncodedString() }
+            if let f = r.fotoCredencial { verif["document"] = "data:image/jpeg;base64," + f.base64EncodedString() }
+            let (vs, vj) = try await post("/api/v1/verification", verif, token: token, org: org)
+            _ = try? await post("/api/v1/profile", ["titlePrefix": r.prefijo], method: "PUT", token: token, org: org)
+            try await processLoginResponse(json)
+            if vs >= 400 { return "Cuenta creada. Falta verificar la matrícula: \(mensaje(vj)). Completalo en Perfil." }
+            return nil
+        } catch {
+            return "Sin conexión. Revisá internet e intentá de nuevo."
+        }
+    }
+
     // MARK: - OAuth
     
     func loginWithApple(identityToken: String, authorizationCode: String,
