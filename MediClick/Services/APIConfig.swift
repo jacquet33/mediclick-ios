@@ -1,5 +1,5 @@
 import Foundation
 
 enum APIConfig {
-    static let baseURL = "https://mediclick.art3d-studio.com.ar"
+    static let baseURL = "https://tuconsultorio.rispy.io"
 }
