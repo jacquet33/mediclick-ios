@@ -30,6 +30,8 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_CFBundleDisplayName: "MediClick"
+        # La app tiene un solo tema claro: sin esto, con el iPhone en modo oscuro el texto que se escribe sale blanco sobre blanco
+        INFOPLIST_KEY_UIUserInterfaceStyle: Light
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.medical"
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "MediClick necesita acceso a la red local para sincronizar"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

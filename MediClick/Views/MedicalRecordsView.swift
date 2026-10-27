@@ -630,8 +630,6 @@ struct NewMedicalRecordView: View {
     @State private var secondaryDx = ""
 
     // Antecedentes chips
-    @State private var selectedPersonalChips: Set<String> = []
-    @State private var selectedFamilyChips: Set<String> = []
     @State private var personalHistoryExtra = ""
     @State private var familyHistoryExtra = ""
 
@@ -818,13 +816,10 @@ struct NewMedicalRecordView: View {
                 ForEach(AntecedentesComunes.personales, id: \.self) { condition in
                     ChipToggle(
                         title: condition,
-                        isSelected: selectedPersonalChips.contains(condition)
+                        isSelected: AntecedentesTexto.contiene(condition, en: personalHistoryExtra)
                     ) {
-                        if selectedPersonalChips.contains(condition) {
-                            selectedPersonalChips.remove(condition)
-                        } else {
-                            selectedPersonalChips.insert(condition)
-                        }
+                        // El chip escribe (o borra) el antecedente en el cuadro de texto de abajo
+                        personalHistoryExtra = AntecedentesTexto.alternar(condition, en: personalHistoryExtra)
                     }
                 }
             }
@@ -832,7 +827,7 @@ struct NewMedicalRecordView: View {
     }
 
     private var antecedentesPersonalesExtra: some View {
-        hcTextArea("Otros antecedentes personales", text: $personalHistoryExtra, placeholder: "Detalles adicionales...")
+        hcTextArea("Detalle de antecedentes personales", text: $personalHistoryExtra, placeholder: "Tocá un antecedente o escribilo acá...")
     }
 
     private var antecedentesFamiliaresChips: some View {
@@ -845,13 +840,10 @@ struct NewMedicalRecordView: View {
                 ForEach(AntecedentesComunes.familiares, id: \.self) { condition in
                     ChipToggle(
                         title: condition,
-                        isSelected: selectedFamilyChips.contains(condition)
+                        isSelected: AntecedentesTexto.contiene(condition, en: familyHistoryExtra)
                     ) {
-                        if selectedFamilyChips.contains(condition) {
-                            selectedFamilyChips.remove(condition)
-                        } else {
-                            selectedFamilyChips.insert(condition)
-                        }
+                        // El chip escribe (o borra) el antecedente en el cuadro de texto de abajo
+                        familyHistoryExtra = AntecedentesTexto.alternar(condition, en: familyHistoryExtra)
                     }
                 }
             }
@@ -859,7 +851,7 @@ struct NewMedicalRecordView: View {
     }
 
     private var antecedentesFamiliaresExtra: some View {
-        hcTextArea("Otros antecedentes familiares", text: $familyHistoryExtra, placeholder: "Detalles adicionales...")
+        hcTextArea("Detalle de antecedentes familiares", text: $familyHistoryExtra, placeholder: "Tocá un antecedente o escribilo acá (ej: madre, diabetes)...")
     }
 
     private var examenSection: some View {
@@ -1336,20 +1328,10 @@ struct NewMedicalRecordView: View {
         chiefComplaint = r.chiefComplaint
         diagnosis = r.diagnosis
         presentIllness = r.presentIllness ?? ""
-        // Parse personal history: match chips, rest goes to extra text
-        let (parsedPersonalChips, parsedPersonalExtra) = parseAntecedentes(
-            r.personalHistory ?? "", knownConditions: AntecedentesComunes.personales
-        )
-        selectedPersonalChips = parsedPersonalChips
-        personalHistoryExtra = parsedPersonalExtra
+        // El texto guardado va completo al cuadro; los chips se marcan solos según lo que diga
+        personalHistoryExtra = r.personalHistory ?? ""
         personalHistory = r.personalHistory ?? ""
-
-        // Parse family history the same way
-        let (parsedFamilyChips, parsedFamilyExtra) = parseAntecedentes(
-            r.familyHistory ?? "", knownConditions: AntecedentesComunes.familiares
-        )
-        selectedFamilyChips = parsedFamilyChips
-        familyHistoryExtra = parsedFamilyExtra
+        familyHistoryExtra = r.familyHistory ?? ""
         familyHistory = r.familyHistory ?? ""
         currentMedications = r.currentMedications ?? ""
         allergiesText = r.allergies ?? ""
@@ -1435,13 +1417,9 @@ struct NewMedicalRecordView: View {
             return lines.map { SecondaryDiagnosisPayload(diagnosis: $0, code: nil) }
         }()
 
-        // Combine chips + extra text for antecedentes
-        let combinedPersonalHistory = combineAntecedentes(
-            chips: selectedPersonalChips, extra: personalHistoryExtra
-        )
-        let combinedFamilyHistory = combineAntecedentes(
-            chips: selectedFamilyChips, extra: familyHistoryExtra
-        )
+        // Antecedentes: el cuadro de texto ya incluye lo elegido con los chips
+        let combinedPersonalHistory = AntecedentesTexto.limpio(personalHistoryExtra)
+        let combinedFamilyHistory = AntecedentesTexto.limpio(familyHistoryExtra)
 
         // Combine revisión por sistemas checkboxes into text
         let combinedSystemsReview = combineCheckboxes(
@@ -1609,6 +1587,48 @@ struct NewMedicalRecordView: View {
             remaining = remaining.replacingOccurrences(of: "  ", with: " ")
         }
         return (found, remaining)
+    }
+}
+
+// MARK: - Antecedentes: chips ↔ texto
+
+/// Los chips de antecedentes escriben en el cuadro de texto, que es lo que se guarda.
+enum AntecedentesTexto {
+    private static func rango(_ condicion: String, en texto: String) -> Range<String.Index>? {
+        // Coincide la palabra completa, sin importar mayúsculas ni tildes
+        let patron = "(?<![\\p{L}])" + NSRegularExpression.escapedPattern(for: condicion) + "(?![\\p{L}])"
+        return texto.range(of: patron, options: [.regularExpression, .caseInsensitive, .diacriticInsensitive])
+    }
+
+    static func contiene(_ condicion: String, en texto: String) -> Bool {
+        rango(condicion, en: texto) != nil
+    }
+
+    static func alternar(_ condicion: String, en texto: String) -> String {
+        if let r = rango(condicion, en: texto) {
+            var t = texto
+            t.removeSubrange(r)
+            return ordenar(t)
+        }
+        let base = texto.trimmingCharacters(in: .whitespacesAndNewlines)
+        if base.isEmpty { return condicion }
+        let separador = base.hasSuffix(",") || base.hasSuffix(".") || base.hasSuffix(";") ? " " : ", "
+        return base + separador + condicion
+    }
+
+    /// Quita comas o espacios que quedan sueltos al borrar un antecedente.
+    static func ordenar(_ texto: String) -> String {
+        var t = texto
+        while t.contains(", ,") { t = t.replacingOccurrences(of: ", ,", with: ",") }
+        while t.contains(",,") { t = t.replacingOccurrences(of: ",,", with: ",") }
+        while t.contains("  ") { t = t.replacingOccurrences(of: "  ", with: " ") }
+        t = t.replacingOccurrences(of: " ,", with: ",").replacingOccurrences(of: ",.", with: ".")
+        return t.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ",;")))
+    }
+
+    static func limpio(_ texto: String) -> String? {
+        let t = ordenar(texto)
+        return t.isEmpty ? nil : t
     }
 }
 
