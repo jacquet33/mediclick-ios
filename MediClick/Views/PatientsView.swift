@@ -164,7 +164,7 @@ struct PatientDetailView: View {
                                 Button {
                                     WhatsAppHelper.open(
                                         phone: phone,
-                                        message: "Hola \(patient.fullName), nos comunicamos desde el consultorio. TuConsultorioOnline"
+                                        message: "Hola \(patient.fullName), nos comunicamos desde el consultorio. TusRecetasMed"
                                     )
                                 } label: {
                                     Label("WhatsApp", systemImage: "message.fill")

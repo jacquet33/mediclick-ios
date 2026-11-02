@@ -1,5 +1,5 @@
 import Foundation
 
 enum APIConfig {
-    static let baseURL = "https://tuconsultorio.rispy.io"
+    static let baseURL = "https://tusrecetasmed.com"
 }

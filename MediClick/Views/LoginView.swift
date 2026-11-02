@@ -31,11 +31,11 @@ struct LoginView: View {
                             .opacity(animateLogo ? 1 : 0)
                             .animation(.easeOut(duration: 0.5), value: animateLogo)
                         
-                        (Text("TuConsultorio").foregroundStyle(Color.mediText)
-                         + Text("Online").foregroundStyle(Color.mediTeal))
+                        (Text("TusRecetas").foregroundStyle(Color.mediText)
+                         + Text("Med").foregroundStyle(Color(red: 0.498, green: 0.561, blue: 0.369)))
                             .font(.system(size: 28, weight: .medium))
                         
-                        Text("by Rispy · Gestión médica integral")
+                        Text("Turnos, historia clínica y recetas")
                             .font(.system(size: 14))
                             .foregroundStyle(Color.mediTextMuted)
                     }
