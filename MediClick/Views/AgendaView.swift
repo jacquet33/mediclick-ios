@@ -802,6 +802,8 @@ struct NewAppointmentView: View {
     @State private var startTime = Date()
     @State private var reason = ""
     @State private var isFirstVisit = false
+    @State private var diasAtencion: Set<Int>? = nil
+    @State private var diasBloqueados: Set<String> = []
     
     var body: some View {
         NavigationStack {
@@ -839,9 +841,8 @@ struct NewAppointmentView: View {
                         
                         VStack(spacing: 14) {
                             MediSectionHeader(title: "Fecha y hora", icon: "calendar.badge.clock")
-                            DatePicker("Fecha", selection: $date, displayedComponents: .date)
-                                .tint(Color.mediPrimary)
-                                .foregroundStyle(Color.mediText)
+                            // Solo se pueden elegir los días en que el médico atiende (el resto aparece en gris)
+                            MediDayPicker(selection: $date, weekdays: diasAtencion, blocked: diasBloqueados)
                             DatePicker("Hora", selection: $startTime, displayedComponents: .hourAndMinute)
                                 .tint(Color.mediPrimary)
                                 .foregroundStyle(Color.mediText)
@@ -869,6 +870,7 @@ struct NewAppointmentView: View {
                     .padding(20)
                 }
             }
+            .task { await cargarDias() }
             .navigationTitle("Nuevo turno")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -880,7 +882,21 @@ struct NewAppointmentView: View {
     }
     
     @State private var isSaving = false
-    
+
+    /// Días con atención según la agenda del médico; si hoy no atiende, preselecciona el próximo día hábil.
+    private func cargarDias() async {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"
+        let hasta = Calendar.current.date(byAdding: .day, value: 180, to: Date()) ?? Date()
+        guard let d: DiasAtencion = try? await APIClient.shared.get("/api/v1/schedules/days", query: ["from": f.string(from: Date()), "to": f.string(from: hasta)]),
+              !d.weekdays.isEmpty else { return }
+        await MainActor.run {
+            diasAtencion = Set(d.weekdays)
+            diasBloqueados = Set(d.blockedDates)
+            let picker = MediDayPicker(selection: .constant(date), weekdays: diasAtencion, blocked: diasBloqueados)
+            if !picker.habilitado(Calendar.current.startOfDay(for: date)), let p = picker.primerDiaHabil() { date = p }
+        }
+    }
+
     private func createAppointment() {
         guard let patient = selectedPatient else { return }
         isSaving = true
