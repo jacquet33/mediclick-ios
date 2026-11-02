@@ -19,14 +19,10 @@ struct LoginView: View {
                     
                     // Logo
                     VStack(spacing: 10) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.mediTeal)
-                                .frame(width: 80, height: 80)
-                            Image(systemName: "cross.case.fill")
-                                .font(.system(size: 32))
-                                .foregroundStyle(.white)
-                        }
+                        Image("LogoTRM")
+                            .resizable()
+                            .frame(width: 84, height: 84)
+                            .shadow(color: Color(red: 0.37, green: 0.43, blue: 0.27).opacity(0.25), radius: 12, y: 6)
                             .scaleEffect(animateLogo ? 1 : 0.85)
                             .opacity(animateLogo ? 1 : 0)
                             .animation(.easeOut(duration: 0.5), value: animateLogo)
