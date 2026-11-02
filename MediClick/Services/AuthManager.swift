@@ -121,7 +121,7 @@ final class AuthManager {
     }
     
 
-    // MARK: - Alta de médico (igual que medicos.rispy.io)
+    // MARK: - Alta de médico (igual que tusrecetasmed.com/medicos)
 
     struct RefepsCheck: Decodable {
         let consultado: Bool
