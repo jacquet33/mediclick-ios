@@ -11,6 +11,12 @@ enum WhatsAppHelper {
         // Quitar todo excepto dígitos
         var digits = raw.filter(\.isNumber)
 
+        // Número de otro país (+598, +55, +56…): ya viene con su código internacional
+        let limpio = raw.trimmingCharacters(in: .whitespaces)
+        if (limpio.hasPrefix("+") || limpio.hasPrefix("00")) && !digits.hasPrefix("54") && !digits.hasPrefix("0054") {
+            return digits.hasPrefix("00") ? String(digits.dropFirst(2)) : digits
+        }
+
         // Si ya empieza con 549 y tiene 13 dígitos → listo
         if digits.hasPrefix("549") && digits.count == 13 {
             return digits
