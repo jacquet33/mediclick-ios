@@ -379,6 +379,7 @@ struct ReminderSettingsView: View {
                 } else {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 18) {
+                            PushEstadoSection()
                             appointmentSection
                             dailySummarySection
                             messagesSection
@@ -920,3 +921,37 @@ struct NotifToggle: View {
     }
 }
 
+
+
+/// Estado de las notificaciones en este iPhone + botón de prueba
+struct PushEstadoSection: View {
+    @State private var resultado: String?
+    @State private var probando = false
+    private var push: PushManager { PushManager.shared }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            MediSectionHeader(title: "Estado en este iPhone", icon: "iphone.radiowaves.left.and.right")
+            HStack(spacing: 10) {
+                Image(systemName: push.registradoEnServidor ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .foregroundStyle(push.registradoEnServidor ? Color.mediSuccess : Color.mediWarning)
+                Text(push.estado).font(.subheadline).foregroundStyle(Color.mediText)
+            }
+            Button {
+                probando = true
+                Task { let r = await push.probar(); await MainActor.run { resultado = r; probando = false } }
+            } label: {
+                Label(probando ? "Probando…" : "Enviar notificación de prueba", systemImage: "paperplane.fill")
+            }
+            .buttonStyle(MediButtonStyle())
+            .disabled(probando)
+            if let resultado { Text(resultado).font(.caption).foregroundStyle(Color.mediTextSoft) }
+            Button("Abrir Ajustes del iPhone") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Color.mediPrimary)
+        }
+        .mediElevated(padding: 18)
+    }
+}

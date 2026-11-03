@@ -10,6 +10,9 @@ final class PushManager: NSObject {
     
     var isAuthorized = false
     var deviceToken: String?
+    /// Estado visible en Notificaciones → "Estado en este iPhone" (para saber por qué no llegan)
+    var estado: String = "Sin revisar"
+    var registradoEnServidor = false
     
     private override init() {
         super.init()
@@ -22,6 +25,7 @@ final class PushManager: NSObject {
             let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
             await MainActor.run {
                 isAuthorized = granted
+                estado = granted ? "Permiso concedido, esperando a Apple…" : "Permiso denegado en Ajustes del iPhone"
                 print("🔔 Push permission granted: \(granted)")
             }
             if granted {
@@ -51,6 +55,7 @@ final class PushManager: NSObject {
     
     func didFailToRegisterForRemoteNotifications(error: Error) {
         print("❌ Push registration failed: \(error)")
+        estado = "Apple no entregó el permiso de notificaciones: \(error.localizedDescription)"
     }
     
     /// Subir token al backend — reintentar si doctor_id aún no está disponible
@@ -58,6 +63,7 @@ final class PushManager: NSObject {
     func uploadToken(_ token: String? = nil) async {
         let tok = token ?? deviceToken ?? UserDefaults.standard.string(forKey: "apns_device_token")
         guard let tok else {
+            if isAuthorized { await MainActor.run { estado = "Apple todavía no entregó el permiso de notificaciones" } }
             print("⚠️ Push: no device token available yet")
             return
         }
@@ -75,6 +81,7 @@ final class PushManager: NSObject {
         }
 
         guard let userId else {
+            await MainActor.run { estado = "Falta la sesión del médico: cerrá sesión y volvé a entrar" }
             print("❌ Push: doctor_id never became available — token NOT uploaded")
             return
         }
@@ -107,11 +114,31 @@ final class PushManager: NSObject {
             struct OkResponse: Decodable { let ok: Bool }
             let _: OkResponse = try await APIClient.shared.post("/api/v1/push/register", body: body)
             print("✅ Push token uploaded for userId=\(userId)")
+            await MainActor.run { registradoEnServidor = true; estado = "Activadas en este iPhone" }
         } catch {
             print("❌ Failed to upload push token: \(error)")
+            await MainActor.run { estado = "No se pudo registrar el iPhone en el servidor: \(error.localizedDescription)" }
         }
     }
     
+    /// Revisa el permiso y manda una notificación de prueba a este iPhone
+    func probar() async -> String {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        if settings.authorizationStatus == .denied { return "Las notificaciones están desactivadas. Activalas en Ajustes → TusRecetasMed → Notificaciones." }
+        await requestPermission()
+        await uploadToken()
+        guard registradoEnServidor, let userId = UserDefaults.standard.string(forKey: "doctor_id") else { return estado }
+        struct TestBody: Encodable { let userType: String; let userId: String; let title: String; let body: String }
+        struct TestResp: Decodable { let sent: Int?; let failed: Int?; let errors: [String]? }
+        do {
+            let r: TestResp = try await APIClient.shared.post("/api/v1/push/test", body: TestBody(
+                userType: UserDefaults.standard.string(forKey: "user_type") ?? "doctor", userId: userId,
+                title: "🔔 TusRecetasMed", body: "Las notificaciones funcionan en este iPhone."))
+            if (r.sent ?? 0) > 0 { return "Enviada. Si no la ves en unos segundos, revisá el modo Concentración." }
+            return "El servidor no pudo enviarla: \(r.errors?.first ?? "sin detalle")"
+        } catch { return "No se pudo probar: \(error.localizedDescription)" }
+    }
+
     /// Desregistrar al hacer logout
     func unregister() async {
         guard let tok = deviceToken ?? UserDefaults.standard.string(forKey: "apns_device_token") else { return }
