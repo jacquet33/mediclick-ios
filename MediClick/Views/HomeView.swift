@@ -189,7 +189,10 @@ struct HomeView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showNotifications) { NotificationsView() }
+            .sheet(isPresented: $showNotifications, onDismiss: { Task { await cargarNoLeidas() } }) { NotificationsView() }
+            .task { await cargarNoLeidas() }
+            .onReceive(NotificationCenter.default.publisher(for: .nuevaNotificacionPush)) { _ in Task { await cargarNoLeidas() } }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in Task { await cargarNoLeidas() } }
             .sheet(isPresented: $showProfile) { ProfileView() }
             .confirmationDialog("Cambiar consultorio", isPresented: $showOrgPicker, titleVisibility: .visible) {
                 ForEach(auth.organizations) { org in
@@ -309,4 +312,19 @@ struct AppointmentRowPro: View {
         }
         .mediElevated(padding: 14)
     }
+}
+
+
+extension HomeView {
+    /// Cantidad de notificaciones sin leer para la campanita
+    func cargarNoLeidas() async {
+        struct R: Decodable { let unread: Int }
+        if let r: R = try? await APIClient.shared.get("/api/v1/notifications/unread-count") {
+            await MainActor.run { notificationCount = r.unread }
+        }
+    }
+}
+
+extension Notification.Name {
+    static let nuevaNotificacionPush = Notification.Name("nuevaNotificacionPush")
 }

@@ -22,7 +22,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     // Notificación recibida en foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        return [.banner, .badge, .sound]
+        // Con la app abierta también se muestra arriba, y se actualiza la campanita
+        await MainActor.run { NotificationCenter.default.post(name: .nuevaNotificacionPush, object: nil) }
+        return [.banner, .list, .badge, .sound]
     }
     
     // Usuario tocó la notificación
@@ -30,6 +32,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let userInfo = response.notification.request.content.userInfo
         let category = response.notification.request.content.categoryIdentifier
         print("📲 Push tapped: category=\(category) data=\(userInfo)")
+        await MainActor.run { NotificationCenter.default.post(name: .nuevaNotificacionPush, object: nil) }
         // TODO: navegar a la pantalla correspondiente
     }
 }
