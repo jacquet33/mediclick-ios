@@ -501,7 +501,9 @@ struct NewPrescriptionView: View {
     @State private var daysValid = 30
     
     // Medication items (multiple)
-    @State private var medications: [MedItem] = [MedItem()]
+    @State private var medications: [MedItem] = []
+    @State private var showPatientPicker = false
+    @State private var showMedSearch = false
     
     // Templates
     @State private var templates: [RxTemplate] = []
@@ -519,6 +521,8 @@ struct NewPrescriptionView: View {
         var customDuration = ""
         var pharmaceuticalForm = ""
         var presentation = ""
+        var coberturaPami: String? = nil
+        var delCatalogo = false
     }
     
     struct RxTemplate: Decodable, Identifiable {
@@ -581,25 +585,29 @@ struct NewPrescriptionView: View {
                         // Paciente
                         VStack(spacing: 12) {
                             MediSectionHeader(title: "Paciente", icon: "person.fill")
-                            Menu {
-                                ForEach(patients) { p in
-                                    Button(p.fullName) { selectedPatient = p }
-                                }
-                            } label: {
+                            Button { showPatientPicker = true } label: {
                                 HStack {
-                                    Image(systemName: "person.circle.fill")
+                                    Image(systemName: "magnifyingglass")
                                         .foregroundStyle(Color.mediTeal)
-                                    Text(selectedPatient?.fullName ?? "Seleccionar paciente")
-                                        .foregroundStyle(selectedPatient == nil ? Color.mediTextMuted : Color.mediText)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(selectedPatient?.fullName ?? "Buscar paciente por nombre o DNI")
+                                            .foregroundStyle(selectedPatient == nil ? Color.mediTextMuted : Color.mediText)
+                                        if let p = selectedPatient, let dni = p.dni {
+                                            Text("DNI \(dni)").font(.system(size: 12)).foregroundStyle(Color.mediTextMuted)
+                                        }
+                                    }
                                     Spacer()
-                                    Image(systemName: "chevron.down")
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(Color.mediTextMuted)
+                                    Text(selectedPatient == nil ? "Buscar" : "Cambiar")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color.mediTeal)
                                 }
                                 .padding(14)
                                 .background(Color.mediBgSoft)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                            }
+                            if let p = selectedPatient {
+                                CoberturaCard(patient: p)
                             }
                         }
                         .mediElevated()
@@ -615,18 +623,28 @@ struct NewPrescriptionView: View {
                         // Medicamentos
                         ForEach($medications) { $med in
                             VStack(spacing: 12) {
-                                HStack {
-                                    MediSectionHeader(title: "Medicamento", icon: "pills.fill")
-                                    Spacer()
-                                    if medications.count > 1 {
-                                        Button {
-                                            medications.removeAll { $0.id == med.id }
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .font(.system(size: 18))
-                                                .foregroundStyle(Color.mediDanger.opacity(0.6))
+                                HStack(alignment: .top) {
+                                    if med.delCatalogo {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(med.name).font(.system(size: 17, weight: .bold)).foregroundStyle(Color.mediText)
+                                            HStack(spacing: 6) {
+                                                Text([med.name == med.genericName ? nil : med.genericName, med.presentation.isEmpty ? nil : med.presentation].compactMap { $0 }.joined(separator: " · "))
+                                                    .font(.system(size: 13)).foregroundStyle(Color.mediTextMuted)
+                                                if esPami, let c = med.coberturaPami { ChipCobertura(texto: "PAMI \(c)") }
+                                            }
                                         }
+                                    } else {
+                                        MediSectionHeader(title: "Medicamento", icon: "pills.fill")
                                     }
+                                    Spacer()
+                                    Button {
+                                        withAnimation { medications.removeAll { $0.id == med.id } }
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(Color.mediDanger.opacity(0.6))
+                                    }
+                                    .accessibilityLabel("Quitar medicamento")
                                 }
                                 
                                 MediTextField(label: "Nombre", icon: "pills", placeholder: "Ej: Amoxicilina", text: $med.name)
@@ -804,22 +822,20 @@ struct NewPrescriptionView: View {
                             .mediElevated()
                         }
                         
-                        // Agregar otro medicamento
-                        Button {
-                            withAnimation { medications.append(MedItem()) }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 16))
-                                Text("Agregar medicamento")
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .foregroundStyle(Color.mediTeal)
-                            .frame(maxWidth: .infinity)
-                            .padding(12)
-                            .background(Color.mediTealSoft)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        if medications.isEmpty {
+                            Text("Todavía no agregaste medicamentos a esta receta.")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.mediTextMuted)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
                         }
+
+                        // Agregar medicamento: buscador del catálogo oficial
+                        Button { showMedSearch = true } label: {
+                            Label("Agregar medicamento", systemImage: "plus")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .buttonStyle(MediButtonStyle())
                         
                         // Validez
                         HStack {
@@ -852,6 +868,26 @@ struct NewPrescriptionView: View {
                     Button("Cancelar") { dismiss() }.foregroundStyle(Color.mediTeal)
                 }
             }
+            .sheet(isPresented: $showPatientPicker) {
+                PatientPickerSheet(patients: patients.filter { $0.isActive }) { p in selectedPatient = p }
+            }
+            .fullScreenCover(isPresented: $showMedSearch) {
+                MedicamentoSearchSheet(esPami: esPami, onSelect: { sel in
+                    var m = MedItem()
+                    m.genericName = capitalizarPrimera(sel.droga)
+                    m.name = sel.marca ?? m.genericName
+                    m.presentation = sel.presentacion ?? ""
+                    m.pharmaceuticalForm = sel.forma ?? ""
+                    m.coberturaPami = sel.coberturaPami
+                    m.delCatalogo = true
+                    withAnimation { medications.append(m) }
+                }, onManual: { texto in
+                    var m = MedItem()
+                    m.name = texto
+                    m.genericName = texto
+                    withAnimation { medications.append(m) }
+                })
+            }
             .sheet(isPresented: $showTemplates) {
                 TemplatePickerSheet(templates: templates) { t in
                     applyTemplate(t)
@@ -860,6 +896,11 @@ struct NewPrescriptionView: View {
         }
     }
     
+    private var esPami: Bool {
+        let os = (selectedPatient?.insuranceProvider ?? "").lowercased()
+        return os.contains("pami") || os.contains("inssjp")
+    }
+
     private func loadTemplates() {
         Task {
             do {
