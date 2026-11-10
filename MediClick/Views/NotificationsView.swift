@@ -469,13 +469,18 @@ struct NotificationDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    private static let isoDia: DateFormatter = {
+        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f
+    }()
+
     private func fechaLarga(_ iso: String?) -> String {
-        guard let iso, let d = DateFormatter.dateOnly.date(from: iso) else { return iso ?? "" }
+        guard let iso, let d = Self.isoDia.date(from: iso) else { return iso ?? "" }
         let f = DateFormatter(); f.locale = Locale(identifier: "es_AR"); f.dateFormat = "EEEE d 'de' MMMM"
         return f.string(from: d).capitalized(with: Locale(identifier: "es_AR"))
     }
     private func fechaCorta(_ iso: String) -> String {
-        guard let d = DateFormatter.dateOnly.date(from: iso) else { return iso }
+        guard let d = Self.isoDia.date(from: iso) else { return iso }
         let f = DateFormatter(); f.locale = Locale(identifier: "es_AR"); f.dateFormat = "dd/MM/yyyy"
         return f.string(from: d)
     }
