@@ -33,5 +33,5 @@ jobs:
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" | tail -20
+            CODE_SIGN_IDENTITY="" > build.log 2>&1 && RC=0 || RC=$?; grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log | head -40; exit $RC
           echo "✅ Build validated — full signing handled by Codemagic"
