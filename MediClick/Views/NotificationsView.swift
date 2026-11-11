@@ -304,6 +304,7 @@ struct PerfilBadge: View {
 struct NotificationDetailView: View {
     let notificationId: String
     @Query private var localPatients: [LocalPatient]
+    @Query private var localAppointments: [LocalAppointment]
     @State private var detalle: Detalle?
     @State private var error: String?
 
@@ -345,7 +346,14 @@ struct NotificationDetailView: View {
                             Text(d.title).font(.system(size: 20, weight: .bold)).foregroundStyle(Color.mediText)
                             Text(d.body).font(.system(size: 14)).foregroundStyle(Color.mediTextSoft)
                         }
-                        if let t = d.turno { turnoCard(t) }
+                        if let t = d.turno {
+                            if let local = localAppointments.first(where: { $0.remoteId?.uuidString.lowercased() == t.id.lowercased() }) {
+                                NavigationLink { AppointmentDetailView(appointment: local) } label: { turnoCard(t, enlace: true) }
+                                    .buttonStyle(.plain)
+                            } else {
+                                turnoCard(t, enlace: false)
+                            }
+                        }
                         if let p = d.paciente { pacienteCard(p, perfil: d.perfil, link: d.linkCompletar) }
                     }
                     .padding(16)
@@ -369,9 +377,18 @@ struct NotificationDetailView: View {
         }
     }
 
-    private func turnoCard(_ t: Detalle.Turno) -> some View {
+    private func turnoCard(_ t: Detalle.Turno, enlace: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Turno", systemImage: "calendar").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.mediTextMuted)
+            HStack {
+                Label("Turno", systemImage: "calendar").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.mediTextMuted)
+                Spacer()
+                if enlace {
+                    HStack(spacing: 3) {
+                        Text("Ver turno").font(.system(size: 13, weight: .semibold))
+                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                    }.foregroundStyle(Color.mediPrimary)
+                }
+            }
             Text(fechaLarga(t.fecha) + (t.hora.map { " · \($0) hs" } ?? ""))
                 .font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.mediText)
             HStack(spacing: 8) {
