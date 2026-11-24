@@ -3,6 +3,7 @@ import SwiftData
 
 struct PrescriptionsView: View {
     @Query(sort: \LocalPrescription.issuedAt, order: .reverse) private var prescriptions: [LocalPrescription]
+    @Environment(\.modelContext) private var modelContext
     @State private var showNew = false
     @State private var searchText = ""
     
@@ -43,7 +44,9 @@ struct PrescriptionsView: View {
                     .padding(20)
                 }
                 .searchable(text: $searchText, prompt: "Buscar receta o paciente")
+                .refreshable { await RecetasSync.sincronizar(modelContext) }
             }
+            .task { await RecetasSync.sincronizar(modelContext) }
             .navigationTitle("Recetas")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -133,6 +136,7 @@ struct PrescriptionDetailView: View {
     @State private var pdfURL: URL?
     @State private var showShareSheet = false
     @State private var pdfError: String?
+    @State private var repetir = false
     
     var body: some View {
         ZStack {
@@ -266,6 +270,14 @@ struct PrescriptionDetailView: View {
             }
         }
         .navigationTitle("Receta")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { repetir = true } label: { Label("Repetir", systemImage: "arrow.triangle.2.circlepath") }
+                    .foregroundStyle(Color.mediTeal)
+                    .disabled(prescription.patient == nil)
+            }
+        }
+        .sheet(isPresented: $repetir) { NewPrescriptionView(prefill: RxPrefill(desde: prescription)) }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showShareSheet) {
             if let pdfURL {
@@ -429,7 +441,7 @@ struct TemplatePickerSheet: View {
                         Text("No hay plantillas cargadas")
                             .font(.system(size: 14))
                             .foregroundStyle(Color.mediTextSoft)
-                        Text("Las plantillas se crean desde la configuración o se precargan con la migración.")
+                        Text("Armá una receta y tocá «Guardar como plantilla» para reutilizarla.")
                             .font(.system(size: 12))
                             .foregroundStyle(Color.mediTextMuted)
                             .multilineTextAlignment(.center)
@@ -508,6 +520,15 @@ struct NewPrescriptionView: View {
     // Templates
     @State private var templates: [RxTemplate] = []
     @State private var showTemplates = false
+    @State private var showGuardarPlantilla = false
+
+    // Repetir una receta anterior
+    private let prefill: RxPrefill?
+    @State private var prefillAplicado = false
+
+    init(prefill: RxPrefill? = nil) {
+        self.prefill = prefill
+    }
     
     struct MedItem: Identifiable {
         let id = UUID()
@@ -861,11 +882,35 @@ struct NewPrescriptionView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Nueva receta")
+            .navigationTitle(prefill == nil ? "Nueva receta" : "Repetir receta")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") { dismiss() }.foregroundStyle(Color.mediTeal)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button { loadTemplates() } label: { Label("Usar plantilla", systemImage: "doc.on.doc") }
+                        Button { showGuardarPlantilla = true } label: { Label("Guardar como plantilla", systemImage: "square.and.arrow.down") }
+                            .disabled(!medications.contains { !$0.name.isEmpty })
+                    } label: { Image(systemName: "ellipsis.circle") }
+                        .foregroundStyle(Color.mediTeal)
+                }
+            }
+            .onAppear { aplicarPrefill() }
+            .sheet(isPresented: $showGuardarPlantilla) {
+                GuardarPlantillaSheet { nombre, categoria in
+                    NuevaPlantillaRequest(
+                        name: nombre, category: categoria,
+                        diagnosis: diagnosis.isEmpty ? nil : diagnosis,
+                        diagnosisCode: diagnosisCode.isEmpty ? nil : diagnosisCode,
+                        items: medications.filter { !$0.name.isEmpty }.map { m in
+                            NuevaPlantillaRequest.Item(
+                                medicationName: m.name,
+                                dosage: m.amount.isEmpty ? nil : "\(m.amount) \(m.unit)",
+                                frequency: m.frequency == "Otro" ? m.customFrequency : m.frequency,
+                                duration: m.duration == "Otro" ? m.customDuration : m.duration)
+                        })
                 }
             }
             .sheet(isPresented: $showPatientPicker) {
@@ -915,6 +960,29 @@ struct NewPrescriptionView: View {
         }
     }
     
+    private func aplicarPrefill() {
+        guard let p = prefill, !prefillAplicado else { return }
+        prefillAplicado = true
+        selectedPatient = p.patient
+        diagnosis = p.diagnosis
+        diagnosisCode = p.diagnosisCode ?? ""
+        medications = p.items.map { i in
+            var m = MedItem()
+            m.name = i.name
+            m.genericName = i.genericName ?? ""
+            m.presentation = i.presentation ?? ""
+            m.pharmaceuticalForm = i.pharmaceuticalForm ?? ""
+            // La dosis guardada es "500 mg": se separa en cantidad y unidad si la unidad es conocida
+            let partes = i.dosage.split(separator: " ", maxSplits: 1).map(String.init)
+            if partes.count == 2, Self.units.contains(partes[1]) { m.amount = partes[0]; m.unit = partes[1] } else { m.amount = i.dosage }
+            if Self.frequencies.contains(i.frequency) { m.frequency = i.frequency } else if !i.frequency.isEmpty { m.frequency = "Otro"; m.customFrequency = i.frequency }
+            if let d = i.duration, !d.isEmpty {
+                if Self.durations.contains(d) { m.duration = d } else { m.duration = "Otro"; m.customDuration = d }
+            }
+            return m
+        }
+    }
+
     private func applyTemplate(_ t: RxTemplate) {
         diagnosis = t.diagnosis ?? ""
         diagnosisCode = t.diagnosisCode ?? ""
