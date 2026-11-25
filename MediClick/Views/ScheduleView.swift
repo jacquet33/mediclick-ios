@@ -362,7 +362,7 @@ struct DayRow: View {
                             .foregroundStyle(day.isActive ? .white : Color.mediTextMuted)
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(MediPressStyle())
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(day.dayName)
@@ -637,7 +637,7 @@ struct ExceptionTypeButton: View {
                     .stroke(isSelected ? color.opacity(0.3) : Color.clear, lineWidth: 1.5)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }
 

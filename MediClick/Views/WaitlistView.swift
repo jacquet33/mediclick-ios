@@ -246,7 +246,7 @@ struct FilterChip: View {
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(isActive ? Color.clear : Color.mediCyan.opacity(0.2), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }
 

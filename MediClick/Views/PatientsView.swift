@@ -557,7 +557,7 @@ struct HCTab: View {
                 .padding(.vertical, 10)
                 .background(isActive ? Color.mediTealSoft : Color.clear)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }
 
@@ -697,6 +697,7 @@ struct NewPatientView: View {
                     patient.syncStatus = .synced
                     modelContext.insert(patient)
                     try? modelContext.save()
+                    MediFeedback.exito("Paciente guardado", patient.fullName)
                     dismiss()
                 }
             } catch {

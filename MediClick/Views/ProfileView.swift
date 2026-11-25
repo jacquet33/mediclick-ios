@@ -115,7 +115,7 @@ struct ProfileView: View {
                                                 ? Color.mediCyan.opacity(0.06) : Color.clear)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(MediPressStyle())
                             }
                             
                             Button { showCreateOrg = true } label: {
@@ -321,7 +321,7 @@ struct SettingRow: View {
             )
             .contentShape(RoundedRectangle(cornerRadius: 10))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }
 
@@ -774,7 +774,7 @@ struct ReminderMinutesPicker: View {
                                 .stroke(isActive ? Color.clear : Color.mediCyan.opacity(0.2), lineWidth: 1)
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(MediPressStyle())
             }
         }
     }
@@ -817,7 +817,7 @@ struct DaysPicker: View {
                                 .stroke(isActive ? Color.clear : Color.mediCyan.opacity(0.2), lineWidth: 1)
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(MediPressStyle())
             }
         }
     }
@@ -882,7 +882,7 @@ struct ChannelToggle: View {
                     .stroke(isOn ? Color.clear : Color.mediCyan.opacity(0.2), lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }
 

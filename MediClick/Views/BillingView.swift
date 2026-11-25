@@ -30,7 +30,7 @@ struct BillingView: View {
                             } label: {
                                 BatchCard(batch: batch)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
                         }
                     }
                 }

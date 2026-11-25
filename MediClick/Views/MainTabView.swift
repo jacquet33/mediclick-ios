@@ -26,6 +26,8 @@ struct MainTabView: View {
                 .tag(4)
         }
         .tint(Color.mediPrimary)
+        .sensoryFeedback(.selection, trigger: selectedTab)
+        .mediExitoHost()
     }
 }
 
@@ -81,7 +83,7 @@ struct MoreView: View {
                             }
                             .mediElevated(padding: 16)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(MediPressStyle())
 
                         // Gestión
                         VStack(alignment: .leading, spacing: 4) {
@@ -93,7 +95,7 @@ struct MoreView: View {
                                 MoreRow(icon: "message.fill", title: "Mensajes",
                                         subtitle: "Chat con pacientes", color: .mediSky)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
 
                             NavigationLink {
                                 WaitlistView()
@@ -101,7 +103,7 @@ struct MoreView: View {
                                 MoreRow(icon: "bell.badge.fill", title: "Lista de espera",
                                         subtitle: "Pacientes esperando turno", color: .mediCyan)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
 
                             NavigationLink {
                                 WaitingRoomView()
@@ -109,7 +111,7 @@ struct MoreView: View {
                                 MoreRow(icon: "chair.lounge.fill", title: "Sala de espera",
                                         subtitle: "Cola de atención en vivo", color: .mediSuccess)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
 
                             NavigationLink {
                                 RolesManagementView()
@@ -117,7 +119,7 @@ struct MoreView: View {
                                 MoreRow(icon: "person.3.fill", title: "Equipo y roles",
                                         subtitle: "Gestionar miembros", color: .mediDeep)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
 
                             NavigationLink {
                                 BillingView()
@@ -125,7 +127,7 @@ struct MoreView: View {
                                 MoreRow(icon: "banknote.fill", title: "Facturación",
                                         subtitle: "Lotes y nomencladores", color: .mediSuccess)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
                         }
                         .mediElevated(padding: 16)
 
@@ -137,19 +139,19 @@ struct MoreView: View {
                                 MoreRow(icon: "clock.fill", title: "Mis horarios",
                                         subtitle: "Días y horarios de atención", color: .mediTeal)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
 
                             Button { showBookingSettings = true } label: {
                                 MoreRow(icon: "link", title: "Reservas online",
                                         subtitle: "Tu enlace para pacientes", color: .mediCyan)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
 
                             Button { showNotifications = true } label: {
                                 MoreRow(icon: "bell.fill", title: "Notificaciones",
                                         subtitle: "Alertas y recordatorios", color: .mediWarning)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
                         }
                         .mediElevated(padding: 16)
 
@@ -179,7 +181,7 @@ struct MoreView: View {
                                         }
                                         .padding(.vertical, 8)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(MediPressStyle())
                                 }
                             }
                             .mediElevated(padding: 16)

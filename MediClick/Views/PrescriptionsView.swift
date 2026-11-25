@@ -31,13 +31,15 @@ struct PrescriptionsView: View {
                             ) { showNew = true }
                             .padding(.top, 60)
                         } else {
-                            ForEach(filtered) { rx in
+                            ForEach(Array(filtered.enumerated()), id: \.element.id) { i, rx in
                                 NavigationLink {
                                     PrescriptionDetailView(prescription: rx)
                                 } label: {
                                     PrescriptionCardPro(prescription: rx)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(MediPressStyle())
+                                .mediAparecer(i)
+                                .mediScrollReveal()
                             }
                         }
                     }
@@ -484,7 +486,7 @@ struct TemplatePickerSheet: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mediBorder, lineWidth: 0.5))
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(MediPressStyle())
                             }
                         }
                         .padding(20)
@@ -1023,6 +1025,7 @@ struct NewPrescriptionView: View {
         try? modelContext.save()
         
         Task { await syncPrescriptionToServer(rx, items: localItems, patient: patient) }
+        MediFeedback.exito("Receta emitida", "\(patient.fullName) la recibe con su código QR")
         dismiss()
     }
     

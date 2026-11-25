@@ -96,13 +96,15 @@ struct AgendaView: View {
                                 ) { showNewAppointment = true }
                                 .padding(.top, 40)
                             } else {
-                                ForEach(dayAppointments) { appt in
+                                ForEach(Array(dayAppointments.enumerated()), id: \.element.id) { i, appt in
                                     NavigationLink {
                                         AppointmentDetailView(appointment: appt)
                                     } label: {
                                         AppointmentRowPro(appointment: appt)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(MediPressStyle())
+                                    .mediAparecer(i)
+                                    .mediScrollReveal()
                                 }
                             }
                         }
@@ -564,7 +566,7 @@ struct CalendarDayCell: View {
                 .frame(width: 38, height: 38)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
         .opacity(isCurrentMonth ? 1.0 : 0.3)
     }
     
@@ -635,7 +637,7 @@ struct DayChip: View {
             .shadow(color: isSelected ? .mediCyan.opacity(0.35) : .mediPrimary.opacity(0.06),
                     radius: isSelected ? 12 : 4, y: isSelected ? 5 : 1)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }
 
@@ -780,8 +782,9 @@ struct AppointmentDetailView: View {
                 body: StatusUpdate(status: status)
             )
             await MainActor.run {
-                appt.status = status
+                withAnimation(.snappy) { appt.status = status }
                 try? modelContext.save()
+                MediFeedback.exito("Turno actualizado", MediStatus.label(for: status))
             }
         } catch {
             // silently fail
@@ -940,6 +943,7 @@ struct NewAppointmentView: View {
                     appt.syncStatus = .synced
                     modelContext.insert(appt)
                     try? modelContext.save()
+                    MediFeedback.exito("Turno agendado", "\(patient.fullName) · \(req.startTime) hs")
                     dismiss()
                 }
             } catch {
@@ -957,6 +961,7 @@ struct EmptyStateMedi: View {
     let subtitle: String
     var actionTitle: String? = nil
     var action: (() -> Void)? = nil
+    @State private var rebote = 0
     
     var body: some View {
         VStack(spacing: 16) {
@@ -967,7 +972,10 @@ struct EmptyStateMedi: View {
                 Image(systemName: icon)
                     .font(.system(size: 38, weight: .light))
                     .foregroundStyle(LinearGradient.medi([.mediCyan, .mediSky]))
+                    .symbolEffect(.bounce, value: rebote)
             }
+            .onAppear { rebote += 1 }
+            .mediAparecer(0)
             Text(title)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Color.mediText)

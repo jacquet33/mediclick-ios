@@ -80,34 +80,35 @@ struct HomeView: View {
                             }
                         }
                         .padding(22)
-                        .background(ZStack { LinearGradient.mediHero; LinearGradient.mediShine })
+                        .background(ZStack { LinearGradient.mediHero; LinearGradient.mediShine; MediAura() })
                         .clipShape(RoundedRectangle(cornerRadius: 22))
                         .overlay(RoundedRectangle(cornerRadius: 22).stroke(.white.opacity(0.25), lineWidth: 1))
                         .shadow(color: .mediPrimary.opacity(0.35), radius: 22, y: 10)
+                        .mediAparecer(0)
                         
                         // Stats — tappable
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
                             Button { selectedTab = 1 } label: {
                                 StatCardPro(icon: "calendar.badge.clock", title: "Turnos hoy",
                                             value: "\(todayAppointments.count)", colors: [.mediCyan, .mediSky])
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(MediPressStyle()).mediAparecer(1)
                             
                             Button { selectedTab = 2 } label: {
                                 StatCardPro(icon: "person.2.fill", title: "Pacientes",
                                             value: "\(patients.count)",
                                             colors: [.mediSuccess, Color(red: 0.10, green: 0.65, blue: 0.48)])
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(MediPressStyle()).mediAparecer(2)
                             
                             Button { selectedTab = 3 } label: {
                                 StatCardPro(icon: "cross.case.fill", title: "Recetas",
                                             value: "\(activeRx)", colors: [.mediSky, .mediPrimary])
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(MediPressStyle()).mediAparecer(3)
                             
                             Button { selectedTab = 4 } label: {
                                 StatCardPro(icon: "message.fill", title: "Mensajes",
                                             value: "\(unreadCount)",
                                             colors: [.mediWarning, Color(red: 0.95, green: 0.55, blue: 0.10)])
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(MediPressStyle()).mediAparecer(4)
                         }
                         
                         // Quick actions
@@ -131,6 +132,7 @@ struct HomeView: View {
                             HStack {
                                 MediSectionHeader(title: "Próximos turnos", icon: "clock.fill")
                                 if !todayAppointments.isEmpty {
+                                    MediLiveDot()
                                     Button("Ver todos") { selectedTab = 1 }
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(Color.mediPrimary)
@@ -143,8 +145,10 @@ struct HomeView: View {
                                                subtitle: "Tu agenda de hoy está libre")
                                 .mediCard()
                             } else {
-                                ForEach(todayAppointments.prefix(5)) { appt in
+                                ForEach(Array(todayAppointments.prefix(5).enumerated()), id: \.element.id) { i, appt in
                                     AppointmentRowPro(appointment: appt)
+                                        .mediAparecer(i + 6)
+                                        .mediScrollReveal()
                                 }
                             }
                         }
@@ -217,9 +221,10 @@ struct QuickAction: View {
     let title: String
     let colors: [Color]
     let action: () -> Void
+    @State private var rebote = 0
     
     var body: some View {
-        Button(action: action) {
+        Button { rebote += 1; action() } label: {
             VStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14)
@@ -228,6 +233,7 @@ struct QuickAction: View {
                     Image(systemName: icon)
                         .font(.system(size: 21, weight: .medium))
                         .foregroundStyle(LinearGradient.medi(colors))
+                        .symbolEffect(.bounce, value: rebote)
                 }
                 Text(title)
                     .font(.caption.weight(.semibold))
@@ -240,7 +246,7 @@ struct QuickAction: View {
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(LinearGradient.mediBorder, lineWidth: 1))
             .shadow(color: .mediPrimary.opacity(0.08), radius: 10, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }
 
@@ -260,9 +266,14 @@ struct StatCardPro: View {
                     .font(.system(size: 14))
                     .foregroundStyle(colors.first ?? .mediTeal)
             }
-            Text(value)
-                .font(.system(size: 24, weight: .medium))
-                .foregroundStyle(Color.mediText)
+            Group {
+                if let n = Int(value) {
+                    MediContador(valor: n)
+                } else {
+                    Text(value).font(.system(size: 24, weight: .medium))
+                }
+            }
+            .foregroundStyle(Color.mediText)
             Text(title)
                 .font(.system(size: 11))
                 .foregroundStyle(Color.mediTextMuted)

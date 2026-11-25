@@ -492,6 +492,6 @@ struct ModeOption: View {
             .background(isSelected ? colors.first!.opacity(0.06) : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }

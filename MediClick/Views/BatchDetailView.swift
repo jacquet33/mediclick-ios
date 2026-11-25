@@ -194,7 +194,7 @@ struct BatchDetailView: View {
                             Capsule().stroke(colorFor(f).opacity(0.15), lineWidth: 0.5)
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(MediPressStyle())
                 }
             }
             .padding(.horizontal, 2)
@@ -328,7 +328,7 @@ struct LineCard: View {
                 }
                 .padding(14)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(MediPressStyle())
 
             if expanded {
                 VStack(alignment: .leading, spacing: 10) {

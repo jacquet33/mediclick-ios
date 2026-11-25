@@ -78,7 +78,7 @@ struct NotificationsView: View {
                     } label: {
                         notificationRow(notif)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(MediPressStyle())
                     .simultaneousGesture(TapGesture().onEnded { markAsRead(notif) })
                 }
             }
@@ -349,7 +349,7 @@ struct NotificationDetailView: View {
                         if let t = d.turno {
                             if let local = localAppointments.first(where: { $0.remoteId?.uuidString.lowercased() == t.id.lowercased() }) {
                                 NavigationLink { AppointmentDetailView(appointment: local) } label: { turnoCard(t, enlace: true) }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(MediPressStyle())
                             } else {
                                 turnoCard(t, enlace: false)
                             }

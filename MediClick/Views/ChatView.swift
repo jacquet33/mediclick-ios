@@ -28,7 +28,7 @@ struct ChatListView: View {
                                 } label: {
                                     ChatRowPro(conversation: conv)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(MediPressStyle())
                             }
                         }
                     }
@@ -279,7 +279,7 @@ struct NewChatView: View {
                                 }
                                 .mediElevated(padding: 14)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
                         }
                     }
                     .padding(20)

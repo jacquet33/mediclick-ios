@@ -171,7 +171,7 @@ struct MedicalRecordsListView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mediTeal.opacity(0.2), lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(MediPressStyle())
 
             if isLoading {
                 ProgressView().tint(.mediTeal).padding(30)
@@ -187,7 +187,7 @@ struct MedicalRecordsListView: View {
                     Button { selectedRecord = record } label: {
                         recordCard(record)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(MediPressStyle())
                 }
             }
         }
@@ -759,7 +759,7 @@ struct NewMedicalRecordView: View {
                                     .clipShape(Capsule())
                                     .overlay(Capsule().stroke(recordType == type.0 ? Color.clear : Color.mediBorder, lineWidth: 0.5))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(MediPressStyle())
                         }
                     }
                 }
@@ -921,7 +921,7 @@ struct NewMedicalRecordView: View {
                 .background(isSelected ? Color.mediPrimary.opacity(0.06) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(MediPressStyle())
 
             if isSelected {
                 revisionNoteField(for: item.id, placeholder: "Detalles de \(item.label.lowercased())...")
@@ -987,7 +987,7 @@ struct NewMedicalRecordView: View {
                 .background(isSelected ? Color.mediTeal.opacity(0.06) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(MediPressStyle())
 
             if isSelected {
                 examenNoteField(for: item.id, placeholder: "Hallazgos en \(item.label.lowercased())...")
@@ -1266,7 +1266,7 @@ struct NewMedicalRecordView: View {
             .clipShape(Capsule())
             .overlay(Capsule().stroke(activeSection == section ? Color.clear : Color.mediBorder, lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 
     @ViewBuilder
@@ -1653,7 +1653,7 @@ struct ChipToggle: View {
                         .stroke(isSelected ? Color.clear : Color.mediBorder, lineWidth: 0.5)
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediPressStyle())
     }
 }
 

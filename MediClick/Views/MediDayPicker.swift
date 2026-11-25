@@ -80,7 +80,7 @@ struct MediDayPicker: View {
                                     ? RoundedRectangle(cornerRadius: 10).stroke(Color.mediPrimary.opacity(0.4), lineWidth: 1) : nil
                                 )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(MediPressStyle())
                         .disabled(!ok)
                         .accessibilityLabel(ok ? "Día \(cal.component(.day, from: d))" : "Día \(cal.component(.day, from: d)), sin atención")
                     } else {

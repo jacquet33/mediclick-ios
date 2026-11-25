@@ -97,7 +97,7 @@ struct RolesManagementView: View {
                                     Button { selectedMember = member } label: {
                                         MemberRow(member: member)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(MediPressStyle())
                                 }
                             }
                             .mediElevated()
@@ -331,7 +331,7 @@ struct MemberDetailSheet: View {
                                                 .stroke(isSelected ? Color.mediCyan.opacity(0.3) : Color.clear, lineWidth: 1)
                                         )
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(MediPressStyle())
                                 }
                             }
                             .mediElevated()

@@ -97,6 +97,7 @@ struct MediCard: ViewModifier {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.mediBorder, lineWidth: 0.5)
             )
+            .mediScrollReveal()
     }
 }
 
@@ -114,6 +115,7 @@ struct MediElevatedCard: ViewModifier {
                 RoundedRectangle(cornerRadius: radius)
                     .stroke(Color.mediBorder, lineWidth: 0.5)
             )
+            .mediScrollReveal()
     }
 }
 
@@ -143,9 +145,10 @@ struct MediButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: 999)
                     .stroke(isSecondary ? Color.mediBorder : .clear, lineWidth: 0.5)
             )
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.6), value: configuration.isPressed)
+            .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.7), trigger: configuration.isPressed) { _, apretado in apretado }
     }
 }
 
@@ -158,9 +161,10 @@ struct MediTealButtonStyle: ButtonStyle {
             .background(Color.mediTeal)
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 999))
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.6), value: configuration.isPressed)
+            .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.7), trigger: configuration.isPressed) { _, apretado in apretado }
     }
 }
 
@@ -218,6 +222,8 @@ struct MediBadge: View {
             .background(bgColor)
             .foregroundStyle(color == .mediPrimary || color == .mediDeep ? .mediTextSoft : color)
             .clipShape(Capsule())
+            .contentTransition(.interpolate)
+            .animation(.snappy, value: text)
     }
 }
 

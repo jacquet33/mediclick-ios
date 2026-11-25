@@ -453,7 +453,7 @@ struct CreateOrganizationView: View {
                                     } label: {
                                         OrgTypeCell(label: t.1, icon: t.2, isSelected: isSelected)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(MediPressStyle())
                                 }
                             }
                         }
