@@ -284,6 +284,7 @@ struct MediTextField: View {
     var placeholder: String = ""
     @Binding var text: String
     var isSecure: Bool = false
+    var error: String? = nil
     @FocusState private var isFocused: Bool
     
     var body: some View {
@@ -320,10 +321,13 @@ struct MediTextField: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(isFocused ? Color.mediTeal : Color.mediBorder, lineWidth: isFocused ? 1 : 0.5)
+                    .stroke(error != nil ? Color.mediDanger : (isFocused ? Color.mediTeal : Color.mediBorder),
+                            lineWidth: error != nil ? 1.2 : (isFocused ? 1 : 0.5))
             )
             .animation(.easeOut(duration: 0.15), value: isFocused)
+            MediFieldError(mensaje: error)
         }
+        .animation(.snappy, value: error)
     }
 }
 

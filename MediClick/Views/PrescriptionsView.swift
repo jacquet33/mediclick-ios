@@ -526,6 +526,9 @@ struct NewPrescriptionView: View {
     @State private var showGuardarPlantilla = false
     @State private var emitiendo = false
     @State private var errorEmision: String?
+    @State private var intento = false
+    @State private var errorHaptico = 0
+    @State private var editarPaciente = false
 
     // Repetir una receta anterior
     private let prefill: RxPrefill?
@@ -632,17 +635,32 @@ struct NewPrescriptionView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
                             }
+                            .mediErrorBorde(errorPaciente != nil)
+                            if let e = errorPaciente {
+                                MediFieldError(mensaje: e)
+                                if selectedPatient != nil {
+                                    Button { editarPaciente = true } label: {
+                                        Label("Completar datos del paciente", systemImage: "square.and.pencil")
+                                            .font(.system(size: 13, weight: .semibold))
+                                    }
+                                    .foregroundStyle(Color.mediTeal)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
                             if let p = selectedPatient {
                                 CoberturaCard(patient: p)
                             }
                         }
                         .mediElevated()
+                        .animation(.snappy, value: errorPaciente)
                         
                         // Diagnóstico
                         VStack(spacing: 12) {
                             MediSectionHeader(title: "Diagnóstico", icon: "stethoscope")
-                            MediTextField(label: "Diagnóstico", icon: "text.alignleft", placeholder: "Ej: Faringitis aguda", text: $diagnosis)
-                            MediTextField(label: "Código CIE-10", icon: "number", placeholder: "Ej: J02.9", text: $diagnosisCode)
+                            MediTextField(label: "Diagnóstico", icon: "text.alignleft", placeholder: "Ej: Faringitis aguda", text: $diagnosis,
+                                          error: ver(MediValida.diagnostico(diagnosis), diagnosis))
+                            MediTextField(label: "Código CIE-10 (opcional)", icon: "number", placeholder: "Ej: J02.9", text: $diagnosisCode,
+                                          error: MediValida.cie10(diagnosisCode))
                         }
                         .mediElevated()
                         
@@ -673,7 +691,8 @@ struct NewPrescriptionView: View {
                                     .accessibilityLabel("Quitar medicamento")
                                 }
                                 
-                                MediTextField(label: "Nombre", icon: "pills", placeholder: "Ej: Amoxicilina", text: $med.name)
+                                MediTextField(label: "Nombre", icon: "pills", placeholder: "Ej: Amoxicilina", text: $med.name,
+                                              error: intento && MediValida.limpio(med.name).isEmpty ? "Completá el nombre del medicamento" : nil)
                                 
                                 // Dosis: cantidad + unidad
                                 HStack(spacing: 8) {
@@ -689,6 +708,7 @@ struct NewPrescriptionView: View {
                                             .background(Color.mediBgSoft)
                                             .clipShape(RoundedRectangle(cornerRadius: 10))
                                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mediBorder, lineWidth: 0.5))
+                                            .mediErrorBorde(ver(MediValida.cantidad(med.amount), med.amount) != nil)
                                     }
                                     .frame(maxWidth: .infinity)
                                     
@@ -720,6 +740,8 @@ struct NewPrescriptionView: View {
                                     .frame(maxWidth: .infinity)
                                 }
                                 
+                                MediFieldError(mensaje: ver(MediValida.cantidad(med.amount), med.amount))
+
                                 // Frecuencia
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("FRECUENCIA")
@@ -750,7 +772,8 @@ struct NewPrescriptionView: View {
                                     }
                                 }
                                 if med.frequency == "Otro" {
-                                    MediTextField(icon: "clock", placeholder: "Frecuencia personalizada", text: $med.customFrequency)
+                                    MediTextField(icon: "clock", placeholder: "Frecuencia personalizada", text: $med.customFrequency,
+                                                  error: intento ? MediValida.textoLibre(med.customFrequency, campo: "frecuencia") : nil)
                                 }
                                 
                                 // Duración
@@ -783,7 +806,8 @@ struct NewPrescriptionView: View {
                                     }
                                 }
                                 if med.duration == "Otro" {
-                                    MediTextField(icon: "calendar", placeholder: "Duración personalizada", text: $med.customDuration)
+                                    MediTextField(icon: "calendar", placeholder: "Duración personalizada", text: $med.customDuration,
+                                                  error: intento ? MediValida.textoLibre(med.customDuration, campo: "duración") : nil)
                                 }
 
                                 // Nombre genérico (DCI) — Ley 25.649
@@ -877,7 +901,10 @@ struct NewPrescriptionView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mediBorder, lineWidth: 0.5))
                         
-                        Button { Task { await save() } } label: {
+                        Button {
+                            withAnimation(.snappy) { intento = true; errorEmision = nil }
+                            if faltante != nil { errorHaptico += 1 } else { Task { await save() } }
+                        } label: {
                             if emitiendo {
                                 HStack(spacing: 8) { ProgressView().tint(.white); Text("Emitiendo…") }
                             } else {
@@ -885,10 +912,10 @@ struct NewPrescriptionView: View {
                             }
                         }
                         .buttonStyle(MediButtonStyle())
-                        .disabled(faltante != nil || emitiendo)
-                        .opacity(faltante != nil ? 0.5 : 1)
+                        .disabled(emitiendo)
+                        .sensoryFeedback(.error, trigger: errorHaptico)
 
-                        if let aviso = errorEmision ?? faltante {
+                        if let aviso = errorEmision ?? (intento ? faltante.map { "Falta corregir: " + $0 } : nil) {
                             Label(aviso, systemImage: errorEmision == nil ? "info.circle" : "exclamationmark.triangle.fill")
                                 .font(.system(size: 13))
                                 .foregroundStyle(errorEmision == nil ? Color.mediTextSoft : Color.mediDanger)
@@ -929,6 +956,9 @@ struct NewPrescriptionView: View {
                                 duration: m.duration == "Otro" ? m.customDuration : m.duration)
                         })
                 }
+            }
+            .sheet(isPresented: $editarPaciente) {
+                if let p = selectedPatient { NewPatientView(editar: p) }
             }
             .sheet(isPresented: $showPatientPicker) {
                 PatientPickerSheet(patients: patients.filter { $0.isActive }) { p in selectedPatient = p }
@@ -1015,17 +1045,36 @@ struct NewPrescriptionView: View {
         }
     }
     
+    private func ver(_ e: String?, _ valor: String) -> String? { (intento || !valor.isEmpty) ? e : nil }
+
+    /// Problema con el paciente elegido (DNI / CUIL obligatorios para la receta electrónica).
+    private var errorPaciente: String? {
+        guard let p = selectedPatient else { return intento ? "Elegí el paciente" : nil }
+        if MediValida.dni(p.dni ?? "", obligatorio: true) != nil { return "\(p.fullName) no tiene un DNI válido cargado" }
+        let cuilCargado = MediValida.digitos(p.cuil ?? "")
+        if !cuilCargado.isEmpty {
+            if let e = MediValida.cuil(cuilCargado, dni: p.dni ?? "") { return e }
+        } else if MediValida.cuilDesdeDni(p.dni ?? "", sexo: p.gender) == nil {
+            return "Falta el CUIL o el sexo de \(p.fullName)"
+        }
+        return nil
+    }
+
     /// Qué le falta a la receta para poder emitirse (mismas reglas que el servidor).
     private var faltante: String? {
         guard let p = selectedPatient else { return "Elegí el paciente" }
-        if (p.dni ?? "").filter(\.isNumber).isEmpty { return "El paciente necesita DNI cargado para la receta electrónica" }
-        if diagnosis.trimmingCharacters(in: .whitespaces).isEmpty { return "Indicá el diagnóstico" }
-        let meds = medications.filter { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty }
+        _ = p
+        if let e = errorPaciente { return e }
+        if let e = MediValida.diagnostico(diagnosis) { return e }
+        if let e = MediValida.cie10(diagnosisCode) { return e }
+        let meds = medications.filter { !MediValida.limpio($0.name).isEmpty }
         if meds.isEmpty { return "Agregá al menos un medicamento" }
+        if medications.contains(where: { MediValida.limpio($0.name).isEmpty }) { return "Completá el nombre del medicamento o quitalo" }
         for (i, m) in meds.enumerated() {
-            let n = meds.count > 1 ? " del medicamento \(i + 1)" : ""
-            if m.amount.trimmingCharacters(in: .whitespaces).isEmpty { return "Completá la dosis\(n)" }
-            if m.frequency == "Otro" && m.customFrequency.trimmingCharacters(in: .whitespaces).isEmpty { return "Completá la frecuencia\(n)" }
+            let n = meds.count > 1 ? " (medicamento \(i + 1))" : ""
+            if let e = MediValida.cantidad(m.amount) { return e + n }
+            if m.frequency == "Otro", MediValida.limpio(m.customFrequency).isEmpty { return "Completá la frecuencia" + n }
+            if m.duration == "Otro", MediValida.limpio(m.customDuration).isEmpty { return "Completá la duración" + n }
         }
         return nil
     }
@@ -1064,7 +1113,7 @@ struct NewPrescriptionView: View {
             let req = RecetaReq(
                 patientId: pid ?? "",
                 diagnosis: diagnosis.trimmingCharacters(in: .whitespaces),
-                diagnosisCode: diagnosisCode.isEmpty ? nil : diagnosisCode,
+                diagnosisCode: diagnosisCode.isEmpty ? nil : MediValida.limpio(diagnosisCode).uppercased(),
                 notes: nil,
                 items: meds.map { m in
                     ItemReq(medicationName: m.name, genericName: m.genericName.isEmpty ? nil : m.genericName,
@@ -1076,7 +1125,7 @@ struct NewPrescriptionView: View {
 
             let expiresAt = Calendar.current.date(byAdding: .day, value: daysValid, to: Date()) ?? Date()
             let rx = LocalPrescription(doctorId: UUID(), patient: patient, diagnosis: diagnosis, expiresAt: expiresAt)
-            rx.diagnosisCode = diagnosisCode.isEmpty ? nil : diagnosisCode
+            rx.diagnosisCode = diagnosisCode.isEmpty ? nil : MediValida.limpio(diagnosisCode).uppercased()
             rx.remoteId = UUID(uuidString: resp.id)
             rx.verificationCode = resp.verificationCode ?? ("MC-" + String(UUID().uuidString.prefix(8)).uppercased())
             rx.syncStatus = .synced

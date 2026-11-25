@@ -99,6 +99,7 @@ struct PatientsView: View {
 
 struct PatientDetailView: View {
     let patient: LocalPatient
+    @State private var editarPaciente = false
     @State private var history: PatientHistory?
     @State private var isLoading = true
     @State private var activeTab = 0
@@ -229,7 +230,12 @@ struct PatientDetailView: View {
         }
         .navigationTitle("Historia clínica")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $editarPaciente) { NewPatientView(editar: patient) }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Editar") { editarPaciente = true }
+                    .foregroundStyle(Color.mediTeal)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Task { await downloadHCPdf() }
@@ -565,68 +571,171 @@ struct HCTab: View {
 struct NewPatientView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @State private var firstName = ""
-    @State private var lastName = ""
-    @State private var dni = ""
-    @State private var cuil = ""
-    @State private var phone = ""
-    @State private var email = ""
-    @State private var dateOfBirth = Date()
-    @State private var insuranceProvider = ""
-    @State private var insuranceNumber = ""
-    @State private var allergiesText = ""
-    @State private var conditionsText = ""
-    
+
+    /// Si viene un paciente, el formulario edita sus datos.
+    private let editar: LocalPatient?
+
+    @State private var firstName: String
+    @State private var lastName: String
+    @State private var dni: String
+    @State private var cuil: String
+    @State private var sexo: String
+    @State private var phone: String
+    @State private var email: String
+    @State private var tieneNacimiento: Bool
+    @State private var dateOfBirth: Date
+    @State private var insuranceProvider: String
+    @State private var insuranceNumber: String
+    @State private var allergiesText: String
+    @State private var conditionsText: String
+
+    @State private var intento = false
+    @State private var isSaving = false
+    @State private var saveError: String?
+    @State private var errorHaptico = 0
+
+    init(editar: LocalPatient? = nil) {
+        self.editar = editar
+        _firstName = State(initialValue: editar?.firstName ?? "")
+        _lastName = State(initialValue: editar?.lastName ?? "")
+        _dni = State(initialValue: editar?.dni ?? "")
+        _cuil = State(initialValue: editar?.cuil.map { MediValida.formatoCuil($0) } ?? "")
+        _sexo = State(initialValue: editar?.gender ?? "not_specified")
+        _phone = State(initialValue: editar?.phone ?? "")
+        _email = State(initialValue: editar?.email ?? "")
+        _tieneNacimiento = State(initialValue: editar?.dateOfBirth != nil)
+        _dateOfBirth = State(initialValue: editar?.dateOfBirth ?? (Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()))
+        _insuranceProvider = State(initialValue: editar?.insuranceProvider ?? "")
+        _insuranceNumber = State(initialValue: editar?.insuranceNumber ?? "")
+        _allergiesText = State(initialValue: editar?.allergies.joined(separator: ", ") ?? "")
+        _conditionsText = State(initialValue: editar?.chronicConditions.joined(separator: ", ") ?? "")
+    }
+
+    // Errores por campo: se muestran apenas se escribe algo, o todos al intentar guardar.
+    private func ver(_ e: String?, _ valor: String) -> String? { (intento || !valor.isEmpty) ? e : nil }
+    private var eNombre: String? { ver(MediValida.nombre(firstName, campo: "nombre"), firstName) }
+    private var eApellido: String? { ver(MediValida.nombre(lastName, campo: "apellido"), lastName) }
+    private var eDni: String? { ver(MediValida.dni(dni), dni) }
+    private var eCuil: String? { ver(MediValida.cuil(cuil, dni: dni), cuil) }
+    private var eTel: String? { ver(MediValida.telefono(phone), phone) }
+    private var eMail: String? { ver(MediValida.email(email), email) }
+    private var eNac: String? { tieneNacimiento ? MediValida.nacimiento(dateOfBirth) : nil }
+
+    private var hayErrores: Bool {
+        MediValida.nombre(firstName, campo: "nombre") != nil || MediValida.nombre(lastName, campo: "apellido") != nil
+            || MediValida.dni(dni) != nil || MediValida.cuil(cuil, dni: dni) != nil
+            || MediValida.telefono(phone) != nil || MediValida.email(email) != nil || eNac != nil
+    }
+
+    /// CUIL a enviar: el cargado o el calculado con DNI + sexo.
+    private var cuilFinal: String? {
+        let d = MediValida.digitos(cuil)
+        if !d.isEmpty { return d }
+        return MediValida.cuilDesdeDni(dni, sexo: sexo)
+    }
+
+    private var avisoReceta: String? {
+        if MediValida.digitos(dni).isEmpty { return "Sin DNI no vas a poder hacerle recetas electrónicas." }
+        if cuilFinal == nil { return "Cargá el CUIL o el sexo para poder hacerle recetas electrónicas." }
+        return nil
+    }
+
+    @ViewBuilder
+    private func campo(_ titulo: String, _ texto: Binding<String>, error: String?, teclado: UIKeyboardType = .default, mayus: TextInputAutocapitalization = .words) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TextField(titulo, text: texto)
+                .keyboardType(teclado)
+                .textInputAutocapitalization(mayus)
+                .autocorrectionDisabled(teclado != .default)
+                .foregroundStyle(error == nil ? Color.mediText : Color.mediDanger)
+            MediFieldError(mensaje: error)
+        }
+        .animation(.snappy, value: error)
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 MediBackground()
                 Form {
                     Section {
+                        campo("Nombre *", $firstName, error: eNombre)
+                        campo("Apellido *", $lastName, error: eApellido)
+                        campo("DNI", $dni, error: eDni, teclado: .numberPad, mayus: .never)
+                        Picker("Sexo (para el CUIL)", selection: $sexo) {
+                            Text("Sin indicar").tag("not_specified")
+                            Text("Femenino").tag("female")
+                            Text("Masculino").tag("male")
+                            Text("X").tag("other")
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            campo("CUIL (XX-XXXXXXXX-X)", $cuil, error: eCuil, teclado: .numberPad, mayus: .never)
+                            if MediValida.digitos(cuil).isEmpty, let c = MediValida.cuilDesdeDni(dni, sexo: sexo), MediValida.dni(dni) == nil {
+                                Button {
+                                    cuil = MediValida.formatoCuil(c)
+                                } label: {
+                                    Label("Usar \(MediValida.formatoCuil(c)) (calculado con DNI y sexo)", systemImage: "wand.and.stars")
+                                        .font(.system(size: 12, weight: .medium))
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+                        campo("Celular (WhatsApp)", $phone, error: eTel, teclado: .phonePad, mayus: .never)
+                        campo("Email", $email, error: eMail, teclado: .emailAddress, mayus: .never)
+                        if tieneNacimiento {
+                            VStack(alignment: .leading, spacing: 4) {
+                                DatePicker("Nacimiento", selection: $dateOfBirth, in: ...Date(), displayedComponents: .date)
+                                MediFieldError(mensaje: eNac)
+                            }
+                        } else {
+                            Button { tieneNacimiento = true } label: {
+                                Label("Agregar fecha de nacimiento", systemImage: "calendar.badge.plus")
+                            }
+                        }
+                    } header: {
                         Label("Datos personales", systemImage: "person.fill")
-                            .foregroundStyle(Color.mediPrimary)
+                    } footer: {
+                        if let a = avisoReceta { Text(a).foregroundStyle(Color.mediWarning) }
                     }
-                    Section {
-                        TextField("Nombre *", text: $firstName)
-                        TextField("Apellido *", text: $lastName)
-                        TextField("DNI", text: $dni).keyboardType(.numberPad)
-                        TextField("CUIL (XX-XXXXXXXX-X)", text: $cuil).keyboardType(.numberPad)
-                        TextField("Teléfono", text: $phone).keyboardType(.phonePad)
-                        TextField("Email", text: $email).keyboardType(.emailAddress).autocapitalization(.none)
-                        DatePicker("Nacimiento", selection: $dateOfBirth, displayedComponents: .date)
-                    }
-                    Section {
-                        Label("Obra social", systemImage: "cross.case.fill")
-                            .foregroundStyle(Color.mediPrimary)
-                    }
+
                     Section {
                         TextField("Obra social / Prepaga", text: $insuranceProvider)
                         TextField("Nro. de afiliado", text: $insuranceNumber)
+                            .textInputAutocapitalization(.never)
+                    } header: {
+                        Label("Obra social", systemImage: "cross.case.fill")
                     }
-                    Section {
-                        Label("Datos clínicos", systemImage: "heart.text.clipboard")
-                            .foregroundStyle(Color.mediPrimary)
-                    }
+
                     Section {
                         TextField("Alergias (separar con coma)", text: $allergiesText)
                         TextField("Condiciones crónicas (separar con coma)", text: $conditionsText)
+                    } header: {
+                        Label("Datos clínicos", systemImage: "heart.text.clipboard")
                     }
+
                     Section {
-                        Button { save() } label: {
+                        Button { guardar() } label: {
                             HStack {
-                                Image(systemName: "person.badge.plus")
-                                Text("Guardar paciente")
+                                if isSaving { ProgressView() } else { Image(systemName: editar == nil ? "person.badge.plus" : "checkmark") }
+                                Text(editar == nil ? "Guardar paciente" : "Guardar cambios")
                             }
                             .frame(maxWidth: .infinity)
                             .foregroundStyle(Color.mediPrimary)
                         }
-                        .disabled(firstName.isEmpty || lastName.isEmpty)
+                        .disabled(isSaving)
+                    } footer: {
+                        if let e = saveError {
+                            Label(e, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color.mediDanger)
+                        } else if intento && hayErrores {
+                            Text("Corregí los campos marcados en rojo.").foregroundStyle(Color.mediDanger)
+                        }
                     }
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Nuevo paciente")
+            .navigationTitle(editar == nil ? "Nuevo paciente" : "Editar paciente")
             .navigationBarTitleDisplayMode(.inline)
+            .sensoryFeedback(.error, trigger: errorHaptico)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") { dismiss() }
@@ -634,77 +743,85 @@ struct NewPatientView: View {
             }
         }
     }
-    
-    @State private var isSaving = false
-    @State private var saveError: String?
-    
-    private func save() {
-        guard !firstName.isEmpty, !lastName.isEmpty else { return }
+
+    private func guardar() {
+        withAnimation(.snappy) { intento = true }
+        guard !hayErrores else { errorHaptico += 1; return }
         isSaving = true
         saveError = nil
-        
+
+        struct PatientReq: Encodable {
+            let firstName: String
+            let lastName: String
+            let dni: String?
+            let cuil: String?
+            let gender: String?
+            let phone: String?
+            let email: String?
+            let dateOfBirth: String?
+            let insuranceProvider: String?
+            let insuranceNumber: String?
+            let allergies: [String]?
+            let chronicConditions: [String]?
+        }
+        struct PatientResp: Decodable { let id: String }
+
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        func n(_ s: String) -> String? { let t = MediValida.limpio(s); return t.isEmpty ? nil : t }
+        func lista(_ s: String) -> [String] { s.split(separator: ",").map { MediValida.limpio(String($0)) }.filter { !$0.isEmpty } }
+
+        let dniD = MediValida.digitos(dni)
+        let req = PatientReq(
+            firstName: MediValida.limpio(firstName), lastName: MediValida.limpio(lastName),
+            dni: dniD.isEmpty ? nil : dniD,
+            cuil: cuilFinal,
+            gender: sexo == "not_specified" ? nil : sexo,
+            phone: n(phone), email: n(email)?.lowercased(),
+            dateOfBirth: tieneNacimiento ? f.string(from: dateOfBirth) : nil,
+            insuranceProvider: n(insuranceProvider), insuranceNumber: n(insuranceNumber),
+            allergies: lista(allergiesText), chronicConditions: lista(conditionsText))
+
         Task {
-            struct CreatePatientReq: Encodable {
-                let firstName: String
-                let lastName: String
-                let dni: String?
-                let cuil: String?
-                let phone: String?
-                let email: String?
-                let dateOfBirth: String?
-                let insuranceProvider: String?
-                let insuranceNumber: String?
-                let allergies: [String]?
-                let chronicConditions: [String]?
-            }
-            
-            struct CreatePatientResp: Decodable {
-                let id: String
-                let firstName: String
-                let lastName: String
-            }
-            
-            let f = DateFormatter()
-            f.dateFormat = "yyyy-MM-dd"
-            
-            let req = CreatePatientReq(
-                firstName: firstName, lastName: lastName,
-                dni: dni.isEmpty ? nil : dni,
-                cuil: cuil.isEmpty ? nil : cuil,
-                phone: phone.isEmpty ? nil : phone,
-                email: email.isEmpty ? nil : email,
-                dateOfBirth: f.string(from: dateOfBirth),
-                insuranceProvider: insuranceProvider.isEmpty ? nil : insuranceProvider,
-                insuranceNumber: insuranceNumber.isEmpty ? nil : insuranceNumber,
-                allergies: allergiesText.isEmpty ? nil : allergiesText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) },
-                chronicConditions: conditionsText.isEmpty ? nil : conditionsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-            )
-            
             do {
-                let resp: CreatePatientResp = try await APIClient.shared.post("/api/v1/patients", body: req)
-                
-                // Guardar en local como caché con remoteId
+                let remoteId: String
+                if let p = editar, let rid = p.remoteId {
+                    let _: PatientResp = try await APIClient.shared.put("/api/v1/patients/\(rid.uuidString.lowercased())", body: req)
+                    remoteId = rid.uuidString
+                } else {
+                    let r: PatientResp = try await APIClient.shared.post("/api/v1/patients", body: req)
+                    remoteId = r.id
+                }
                 await MainActor.run {
-                    let patient = LocalPatient(doctorId: UUID(), firstName: firstName, lastName: lastName)
-                    patient.remoteId = UUID(uuidString: resp.id)
-                    patient.dni = dni.isEmpty ? nil : dni
-                    patient.cuil = cuil.isEmpty ? nil : cuil
-                    patient.phone = phone.isEmpty ? nil : phone
-                    patient.email = email.isEmpty ? nil : email
-                    patient.dateOfBirth = dateOfBirth
-                    patient.insuranceProvider = insuranceProvider.isEmpty ? nil : insuranceProvider
-                    patient.insuranceNumber = insuranceNumber.isEmpty ? nil : insuranceNumber
+                    let patient = editar ?? LocalPatient(doctorId: UUID(), firstName: req.firstName, lastName: req.lastName)
+                    patient.remoteId = UUID(uuidString: remoteId)
+                    patient.firstName = req.firstName
+                    patient.lastName = req.lastName
+                    patient.dni = req.dni
+                    patient.cuil = req.cuil
+                    patient.gender = sexo
+                    patient.phone = req.phone
+                    patient.email = req.email
+                    patient.dateOfBirth = tieneNacimiento ? dateOfBirth : nil
+                    patient.insuranceProvider = req.insuranceProvider
+                    patient.insuranceNumber = req.insuranceNumber
+                    patient.allergies = req.allergies ?? []
+                    patient.chronicConditions = req.chronicConditions ?? []
                     patient.syncStatus = .synced
-                    modelContext.insert(patient)
+                    patient.updatedAt = Date()
+                    if editar == nil { modelContext.insert(patient) }
                     try? modelContext.save()
-                    MediFeedback.exito("Paciente guardado", patient.fullName)
+                    isSaving = false
+                    MediFeedback.exito(editar == nil ? "Paciente guardado" : "Datos actualizados", patient.fullName)
                     dismiss()
                 }
             } catch {
-                if (error as? APIError)?.requiresLogin == true { return }
+                if (error as? APIError)?.requiresLogin == true { await MainActor.run { isSaving = false }; return }
                 await MainActor.run {
-                    saveError = error.localizedDescription
+                    saveError = (error as? LocalizedError)?.errorDescription ?? "No se pudo guardar. Intentá de nuevo."
                     isSaving = false
+                    errorHaptico += 1
                 }
             }
         }
