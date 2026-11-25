@@ -399,8 +399,9 @@ struct PrescriptionDetailView: View {
             return true
         } catch {
             if (error as? APIError)?.requiresLogin == true { return false }
+            let motivo = (error as? LocalizedError)?.errorDescription ?? "No se pudo sincronizar. Intentá de nuevo."
             await MainActor.run {
-                pdfError = "No se pudo sincronizar. Intentá de nuevo."
+                pdfError = motivo.contains("dosis") ? motivo + ". Tocá Repetir para emitirla de nuevo con la dosis." : motivo
                 isLoadingPdf = false
             }
             return false
@@ -523,6 +524,8 @@ struct NewPrescriptionView: View {
     @State private var templates: [RxTemplate] = []
     @State private var showTemplates = false
     @State private var showGuardarPlantilla = false
+    @State private var emitiendo = false
+    @State private var errorEmision: String?
 
     // Repetir una receta anterior
     private let prefill: RxPrefill?
@@ -874,12 +877,24 @@ struct NewPrescriptionView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mediBorder, lineWidth: 0.5))
                         
-                        Button { save() } label: {
-                            Label("Emitir receta", systemImage: "doc.badge.plus")
+                        Button { Task { await save() } } label: {
+                            if emitiendo {
+                                HStack(spacing: 8) { ProgressView().tint(.white); Text("Emitiendo…") }
+                            } else {
+                                Label("Emitir receta", systemImage: "doc.badge.plus")
+                            }
                         }
                         .buttonStyle(MediButtonStyle())
-                        .disabled(selectedPatient == nil || diagnosis.isEmpty || medications.first?.name.isEmpty != false)
-                        .opacity(selectedPatient == nil || diagnosis.isEmpty || medications.first?.name.isEmpty != false ? 0.5 : 1)
+                        .disabled(faltante != nil || emitiendo)
+                        .opacity(faltante != nil ? 0.5 : 1)
+
+                        if let aviso = errorEmision ?? faltante {
+                            Label(aviso, systemImage: errorEmision == nil ? "info.circle" : "exclamationmark.triangle.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(errorEmision == nil ? Color.mediTextSoft : Color.mediDanger)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .transition(.opacity)
+                        }
                     }
                     .padding(20)
                 }
@@ -1000,35 +1015,93 @@ struct NewPrescriptionView: View {
         }
     }
     
-    private func save() {
-        guard let patient = selectedPatient else { return }
-        let expiresAt = Calendar.current.date(byAdding: .day, value: daysValid, to: Date()) ?? Date()
-        let rx = LocalPrescription(doctorId: UUID(), patient: patient, diagnosis: diagnosis, expiresAt: expiresAt)
-        rx.diagnosisCode = diagnosisCode.isEmpty ? nil : diagnosisCode
-        rx.verificationCode = "MC-" + String(UUID().uuidString.prefix(8)).uppercased()
-        
-        var localItems: [LocalPrescriptionItem] = []
-        for med in medications where !med.name.isEmpty {
-            let dosageStr = med.amount.isEmpty ? "" : "\(med.amount) \(med.unit)"
-            let freqStr = med.frequency == "Otro" ? med.customFrequency : med.frequency
-            let durStr = med.duration == "Otro" ? med.customDuration : med.duration
-            let item = LocalPrescriptionItem(prescription: rx, medicationName: med.name, dosage: dosageStr, frequency: freqStr)
-            item.duration = durStr.isEmpty ? nil : durStr
-            item.genericName = med.genericName.isEmpty ? nil : med.genericName
-            item.pharmaceuticalForm = med.pharmaceuticalForm.isEmpty ? nil : med.pharmaceuticalForm
-            item.presentation = med.presentation.isEmpty ? nil : med.presentation
-            modelContext.insert(item)
-            localItems.append(item)
+    /// Qué le falta a la receta para poder emitirse (mismas reglas que el servidor).
+    private var faltante: String? {
+        guard let p = selectedPatient else { return "Elegí el paciente" }
+        if (p.dni ?? "").filter(\.isNumber).isEmpty { return "El paciente necesita DNI cargado para la receta electrónica" }
+        if diagnosis.trimmingCharacters(in: .whitespaces).isEmpty { return "Indicá el diagnóstico" }
+        let meds = medications.filter { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty }
+        if meds.isEmpty { return "Agregá al menos un medicamento" }
+        for (i, m) in meds.enumerated() {
+            let n = meds.count > 1 ? " del medicamento \(i + 1)" : ""
+            if m.amount.trimmingCharacters(in: .whitespaces).isEmpty { return "Completá la dosis\(n)" }
+            if m.frequency == "Otro" && m.customFrequency.trimmingCharacters(in: .whitespaces).isEmpty { return "Completá la frecuencia\(n)" }
         }
-        
-        modelContext.insert(rx)
-        try? modelContext.save()
-        
-        Task { await syncPrescriptionToServer(rx, items: localItems, patient: patient) }
-        MediFeedback.exito("Receta emitida", "\(patient.fullName) la recibe con su código QR")
-        dismiss()
+        return nil
     }
-    
+
+    /// Emite la receta en el servidor y recién ahí la guarda en el teléfono,
+    /// así nunca queda una receta local que la farmacia no pueda validar.
+    private func save() async {
+        guard faltante == nil, let patient = selectedPatient else { return }
+        emitiendo = true
+        errorEmision = nil
+
+        struct PacienteReq: Encodable { let firstName: String; let lastName: String; let phone: String?; let email: String?; let dni: String? }
+        struct IdResp: Decodable { let id: String }
+        struct ItemReq: Encodable {
+            let medicationName: String; let genericName: String?; let dosage: String; let frequency: String
+            let duration: String?; let pharmaceuticalForm: String?; let presentation: String?
+        }
+        struct RecetaReq: Encodable { let patientId: String; let diagnosis: String; let diagnosisCode: String?; let notes: String?; let items: [ItemReq] }
+        struct RecetaResp: Decodable { let id: String; let verificationCode: String? }
+
+        let meds = medications.filter { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty }
+        func dosis(_ m: MedItem) -> String { "\(m.amount.trimmingCharacters(in: .whitespaces)) \(m.unit)" }
+        func frec(_ m: MedItem) -> String { m.frequency == "Otro" ? m.customFrequency : m.frequency }
+        func dur(_ m: MedItem) -> String { m.duration == "Otro" ? m.customDuration : m.duration }
+
+        do {
+            var pid = patient.remoteId?.uuidString
+            if pid == nil {
+                let r: IdResp = try await APIClient.shared.post("/api/v1/patients", body: PacienteReq(
+                    firstName: patient.firstName, lastName: patient.lastName,
+                    phone: patient.phone, email: patient.email, dni: patient.dni))
+                patient.remoteId = UUID(uuidString: r.id)
+                patient.syncStatus = .synced
+                pid = r.id
+            }
+            let req = RecetaReq(
+                patientId: pid ?? "",
+                diagnosis: diagnosis.trimmingCharacters(in: .whitespaces),
+                diagnosisCode: diagnosisCode.isEmpty ? nil : diagnosisCode,
+                notes: nil,
+                items: meds.map { m in
+                    ItemReq(medicationName: m.name, genericName: m.genericName.isEmpty ? nil : m.genericName,
+                            dosage: dosis(m), frequency: frec(m), duration: dur(m).isEmpty ? nil : dur(m),
+                            pharmaceuticalForm: m.pharmaceuticalForm.isEmpty ? nil : m.pharmaceuticalForm,
+                            presentation: m.presentation.isEmpty ? nil : m.presentation)
+                })
+            let resp: RecetaResp = try await APIClient.shared.post("/api/v1/prescriptions", body: req)
+
+            let expiresAt = Calendar.current.date(byAdding: .day, value: daysValid, to: Date()) ?? Date()
+            let rx = LocalPrescription(doctorId: UUID(), patient: patient, diagnosis: diagnosis, expiresAt: expiresAt)
+            rx.diagnosisCode = diagnosisCode.isEmpty ? nil : diagnosisCode
+            rx.remoteId = UUID(uuidString: resp.id)
+            rx.verificationCode = resp.verificationCode ?? ("MC-" + String(UUID().uuidString.prefix(8)).uppercased())
+            rx.syncStatus = .synced
+            for m in meds {
+                let item = LocalPrescriptionItem(prescription: rx, medicationName: m.name, dosage: dosis(m), frequency: frec(m))
+                item.duration = dur(m).isEmpty ? nil : dur(m)
+                item.genericName = m.genericName.isEmpty ? nil : m.genericName
+                item.pharmaceuticalForm = m.pharmaceuticalForm.isEmpty ? nil : m.pharmaceuticalForm
+                item.presentation = m.presentation.isEmpty ? nil : m.presentation
+                modelContext.insert(item)
+            }
+            modelContext.insert(rx)
+            try? modelContext.save()
+            emitiendo = false
+            MediFeedback.exito("Receta emitida", "\(patient.fullName) la recibe con su código QR")
+            dismiss()
+        } catch {
+            emitiendo = false
+            if (error as? APIError)?.requiresLogin == true { return }
+            withAnimation(.snappy) {
+                errorEmision = (error as? LocalizedError)?.errorDescription ?? "No se pudo emitir la receta. Intentá de nuevo."
+            }
+        }
+    }
+
     private func syncPrescriptionToServer(_ rx: LocalPrescription, items: [LocalPrescriptionItem], patient: LocalPatient) async {
         struct CreateRxRequest: Encodable {
             let patientId: String
