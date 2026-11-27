@@ -123,16 +123,11 @@ struct LoginView: View {
                         .opacity(email.isEmpty || password.isEmpty ? 0.6 : 1)
                     }
                     
-                    Button {
-                        showRegister = true
-                    } label: {
-                        Text("¿No tenés cuenta? ")
-                            .foregroundStyle(Color.mediTextSoft)
-                        + Text("Registrate")
-                            .foregroundStyle(Color.mediPrimary)
-                            .fontWeight(.semibold)
-                    }
-                    .font(.subheadline)
+                    Text("¿Todavía no tenés cuenta? Creala en tusrecetasmed.com y después ingresá acá.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.mediTextSoft)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
                     
                     Spacer().frame(height: 30)
                 }

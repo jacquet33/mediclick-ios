@@ -212,7 +212,8 @@ final class AuthManager {
         do {
             var body: [String: Any] = [
                 "identityToken": identityToken,
-                "authorizationCode": authorizationCode
+                "authorizationCode": authorizationCode,
+                "soloExistente": true
             ]
             if let name = fullName {
                 body["fullName"] = ["givenName": name.givenName ?? "", "familyName": name.familyName ?? ""]
@@ -227,13 +228,14 @@ final class AuthManager {
             
             let (responseData, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                throw AuthError.invalidCredentials
+                let msg = (try? JSONSerialization.jsonObject(with: responseData) as? [String: Any])?["message"] as? String
+                throw NSError(domain: "apple", code: 1, userInfo: [NSLocalizedDescriptionKey: msg ?? "Error con Apple Sign-In"])
             }
             let json = try JSONSerialization.jsonObject(with: responseData) as? [String: Any]
             try await processLoginResponse(json)
         } catch {
             await MainActor.run {
-                errorMessage = "Error con Apple Sign-In"
+                errorMessage = (error as NSError).domain == "apple" ? (error as NSError).localizedDescription : "Error con Apple Sign-In"
                 isLoading = false
             }
         }
@@ -247,7 +249,7 @@ final class AuthManager {
             var request = URLRequest(url: URL(string: "\(APIConfig.baseURL)/api/v1/auth/google")!)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONSerialization.data(withJSONObject: ["idToken": idToken, "intent": "doctor"])
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["idToken": idToken, "intent": "doctor", "soloExistente": true])
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
                 let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["message"]

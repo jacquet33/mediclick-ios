@@ -100,7 +100,7 @@ struct MediClickApp: App {
     var body: some Scene {
         WindowGroup {
             if authManager.isAuthenticated {
-                MainTabView()
+                AccesoApp { MainTabView() }
                     .environment(authManager)
                     .task {
                         // Pedir permiso de push al loguearse
