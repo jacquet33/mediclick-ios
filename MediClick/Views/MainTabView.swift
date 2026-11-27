@@ -49,6 +49,9 @@ struct MoreView: View {
     @State private var showBookingSettings = false
     @State private var showSchedule = false
     @State private var showNotifications = false
+    @State private var confirmarBaja = false
+    @State private var dandoDeBaja = false
+    @State private var errorBaja: String?
 
     var body: some View {
         NavigationStack {
@@ -199,6 +202,18 @@ struct MoreView: View {
                         }
                         .buttonStyle(MediButtonStyle(isSecondary: true))
                         .padding(.top, 4)
+
+                        Button(role: .destructive) { confirmarBaja = true } label: {
+                            if dandoDeBaja { ProgressView() } else {
+                                Text("Eliminar mi cuenta").font(.system(size: 14, weight: .medium)).foregroundStyle(Color.mediDanger)
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .padding(.top, 6)
+                        .disabled(dandoDeBaja)
+                        if let e = errorBaja {
+                            Text(e).font(.caption).foregroundStyle(Color.mediDanger).multilineTextAlignment(.center)
+                        }
                     }
                     .padding(20)
                 }
@@ -208,6 +223,27 @@ struct MoreView: View {
             .sheet(isPresented: $showSchedule) { ScheduleView() }
             .sheet(isPresented: $showBookingSettings) { BookingSettingsView() }
             .sheet(isPresented: $showNotifications) { ReminderSettingsView() }
+            .alert("¿Eliminar tu cuenta?", isPresented: $confirmarBaja) {
+                Button("Eliminar cuenta", role: .destructive) { Task { await eliminarCuenta() } }
+                Button("Cancelar", role: .cancel) {}
+            } message: {
+                Text("Vas a perder el acceso, tu agenda online se desactiva y se cancela la renovación de tu plan. Por la Ley 26.529, las historias clínicas y recetas que emitiste se conservan de forma segura durante el plazo legal y no se muestran a nadie.")
+            }
+        }
+    }
+
+    private func eliminarCuenta() async {
+        struct Req: Encodable { let motivo: String }
+        struct Resp: Decodable { let ok: Bool? }
+        dandoDeBaja = true
+        errorBaja = nil
+        do {
+            let _: Resp = try await APIClient.shared.post("/api/v1/profile/eliminar-cuenta", body: Req(motivo: "Pedido desde la app de iOS"))
+            dandoDeBaja = false
+            auth.logout()
+        } catch {
+            dandoDeBaja = false
+            errorBaja = (error as? LocalizedError)?.errorDescription ?? "No se pudo eliminar la cuenta. Escribinos a support@tusrecetasmed.com."
         }
     }
 }
