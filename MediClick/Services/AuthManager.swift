@@ -239,10 +239,29 @@ final class AuthManager {
         }
     }
     
+    /// Google: OAuth con PKCE en ASWebAuthenticationSession (cliente iOS, sin secreto) → id_token → /api/v1/auth/google
     func loginWithGoogle() async {
-        await MainActor.run {
-            errorMessage = "Google Sign-In: configurar SDK"
-            isLoading = false
+        await MainActor.run { isLoading = true; errorMessage = nil }
+        do {
+            let idToken = try await GoogleOAuth.idToken()
+            var request = URLRequest(url: URL(string: "\(APIConfig.baseURL)/api/v1/auth/google")!)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["idToken": idToken, "intent": "doctor"])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["message"]
+                throw NSError(domain: "google", code: 1, userInfo: [NSLocalizedDescriptionKey: (msg as? String) ?? "No se pudo ingresar con Google"])
+            }
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            try await processLoginResponse(json)
+        } catch GoogleOAuth.Cancelado.cancelado {
+            await MainActor.run { isLoading = false }
+        } catch {
+            await MainActor.run {
+                errorMessage = (error as NSError).localizedDescription
+                isLoading = false
+            }
         }
     }
     
