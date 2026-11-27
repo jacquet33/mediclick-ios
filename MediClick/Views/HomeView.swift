@@ -99,12 +99,10 @@ struct HomeView: View {
                                             colors: [.mediSuccess, Color(red: 0.10, green: 0.65, blue: 0.48)])
                             }.buttonStyle(MediPressStyle()).mediAparecer(2)
                             
-                            if PlataformaConfig.shared.recetas {
-                                Button { selectedTab = 3 } label: {
-                                    StatCardPro(icon: "cross.case.fill", title: "Recetas",
-                                                value: "\(activeRx)", colors: [.mediSky, .mediPrimary])
-                                }.buttonStyle(MediPressStyle()).mediAparecer(3)
-                            }
+                            Button { selectedTab = 3 } label: {
+                                StatCardPro(icon: "cross.case.fill", title: "Recetas",
+                                            value: "\(activeRx)", colors: PlataformaConfig.shared.recetas ? [.mediSky, .mediPrimary] : [.gray.opacity(0.6), .gray.opacity(0.4)])
+                            }.buttonStyle(MediPressStyle()).mediAparecer(3)
                             
                             Button { selectedTab = 4 } label: {
                                 StatCardPro(icon: "message.fill", title: "Mensajes",
@@ -123,11 +121,11 @@ struct HomeView: View {
                                 QuickAction(icon: "calendar.badge.plus", title: "Turno", colors: [.mediCyan, .mediSky]) {
                                     selectedTab = 1
                                 }
-                                if PlataformaConfig.shared.recetas {
-                                    QuickAction(icon: "doc.badge.plus", title: "Receta", colors: [.mediSky, .mediPrimary]) {
-                                        selectedTab = 3
-                                    }
+                                QuickAction(icon: "doc.badge.plus", title: PlataformaConfig.shared.recetas ? "Receta" : "Receta · pronto",
+                                            colors: PlataformaConfig.shared.recetas ? [.mediSky, .mediPrimary] : [.gray.opacity(0.6), .gray.opacity(0.4)]) {
+                                    selectedTab = 3
                                 }
+                                .opacity(PlataformaConfig.shared.recetas ? 1 : 0.6)
                             }
                         }
                         

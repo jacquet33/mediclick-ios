@@ -6,6 +6,7 @@ struct PrescriptionsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showNew = false
     @State private var searchText = ""
+    private var plataforma = PlataformaConfig.shared
     
     var filtered: [LocalPrescription] {
         if searchText.isEmpty { return prescriptions }
@@ -22,7 +23,11 @@ struct PrescriptionsView: View {
                 
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 12) {
-                        if prescriptions.isEmpty {
+                        if !plataforma.recetas {
+                            RecetasProximamente()
+                                .mediAparecer(0)
+                        }
+                        if prescriptions.isEmpty && plataforma.recetas {
                             EmptyStateMedi(
                                 icon: "cross.case.fill",
                                 title: "Sin recetas",
@@ -46,7 +51,7 @@ struct PrescriptionsView: View {
                     .padding(20)
                 }
                 .searchable(text: $searchText, prompt: "Buscar receta o paciente")
-                .refreshable { await RecetasSync.sincronizar(modelContext) }
+                .refreshable { await plataforma.cargar(); await RecetasSync.sincronizar(modelContext) }
             }
             .task { await RecetasSync.sincronizar(modelContext) }
             .navigationTitle("Recetas")
@@ -54,15 +59,57 @@ struct PrescriptionsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showNew = true } label: {
                         ZStack {
-                            Circle().fill(LinearGradient.mediHero).frame(width: 34, height: 34)
+                            if plataforma.recetas {
+                                Circle().fill(LinearGradient.mediHero).frame(width: 34, height: 34)
+                            } else {
+                                Circle().fill(Color.gray.opacity(0.35)).frame(width: 34, height: 34)
+                            }
                             Image(systemName: "plus").font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
                         }
-                        .shadow(color: .mediCyan.opacity(0.4), radius: 8, y: 3)
+                        .shadow(color: plataforma.recetas ? .mediCyan.opacity(0.4) : .clear, radius: 8, y: 3)
                     }
+                    .disabled(!plataforma.recetas)
+                    .accessibilityHint(plataforma.recetas ? "" : "La receta electrónica todavía no está habilitada")
                 }
             }
             .sheet(isPresented: $showNew) { NewPrescriptionView() }
         }
+    }
+}
+
+/// Aviso mientras la receta electrónica no está habilitada en la plataforma.
+struct RecetasProximamente: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "clock.badge.checkmark.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Color.mediWarning)
+                    .symbolEffect(.pulse, options: .repeating)
+                Text("La receta electrónica llega en los próximos días")
+                    .font(.mediHeadline(16))
+                    .foregroundStyle(Color.mediText)
+            }
+            Text("Estamos completando la inscripción de TusRecetasMed en el registro nacional del Ministerio de Salud (ReNaPDiS). Apenas esté aprobada se habilita sola acá, sin actualizar la app.")
+                .font(.mediCaption(14))
+                .foregroundStyle(Color.mediTextSoft)
+            Text("Mientras tanto podés usar turnos, agenda, pacientes, historia clínica y avisos por WhatsApp.")
+                .font(.mediCaption(13))
+                .foregroundStyle(Color.mediTextSoft)
+            Label("Emitir receta", systemImage: "doc.badge.plus")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.gray.opacity(0.4))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .accessibilityLabel("Emitir receta, todavía no disponible")
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.mediSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.mediWarning.opacity(0.5), lineWidth: 1))
     }
 }
 
@@ -275,6 +322,7 @@ struct PrescriptionDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { repetir = true } label: { Label("Repetir", systemImage: "arrow.triangle.2.circlepath") }
+                    .disabled(!PlataformaConfig.shared.recetas)
                     .foregroundStyle(Color.mediTeal)
                     .disabled(prescription.patient == nil)
             }

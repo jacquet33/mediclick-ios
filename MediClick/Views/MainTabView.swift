@@ -19,11 +19,9 @@ struct MainTabView: View {
                 .tabItem { Label("Pacientes", systemImage: "person.2.fill") }
                 .tag(2)
 
-            if plataforma.recetas {
-                PrescriptionsView()
-                    .tabItem { Label("Recetas", systemImage: "cross.case.fill") }
-                    .tag(3)
-            }
+            PrescriptionsView()
+                .tabItem { Label("Recetas", systemImage: "cross.case.fill") }
+                .tag(3)
 
             MoreView(selectedTab: $selectedTab)
                 .tabItem { Label("Más", systemImage: "square.grid.2x2.fill") }
@@ -34,7 +32,7 @@ struct MainTabView: View {
         .mediExitoHost()
         .task { await plataforma.cargar() }
         .onChange(of: fase) { _, f in if f == .active { Task { await plataforma.cargar() } } }
-        .onChange(of: plataforma.recetas) { _, on in if !on && selectedTab == 3 { selectedTab = 0 } }
+
     }
 }
 
